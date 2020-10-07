@@ -23,7 +23,7 @@ do
         mkdir $OUTPUTFOLDER/$foldername
         for mask in $MASKFOLDER*
         do
-          maskname=`basename $mask | sed 's/std_2mm.nii.gz//'`
+          maskname=`basename $mask | sed 's/_std_2mm.nii.gz//'`
           echo "...flirt on $maskname..."
           flirt -in $mask -ref $folder/scan-data/niftis/mb_rest/edited-mb-rest.feat/reg/example_func.nii.gz -applyxfm -init $folder/scan-data/niftis/mb_rest/edited-mb-rest.feat/reg/standard2example_func.mat -out $OUTPUTFOLDER/${foldername}/${maskname}.nii.gz
           echo "...done"
