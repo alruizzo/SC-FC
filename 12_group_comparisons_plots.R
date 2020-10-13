@@ -6,17 +6,12 @@
 
 ####==========================================================
 ### INSTALL PACKAGES
-#install.packages("pacman")
-#require(pacman)
-# pacman::p_load(ggplot2, dplyr, ggthemes, ggvis, plotly, rio,
-#                stringr, tidyr, readxl, xlsx, ggpubr, psych,
-#                car, tidyverse, rstatix, cocor, ppcor,
+# install.packages("pacman")
+# require(pacman)
+# pacman::p_load(ggplot2, dplyr, ggthemes, ggvis, plotly,
+#                rio, stringr, tidyr, readxl, ggpubr,
+#                psych, car, tidyverse, rstatix,
 #                RColorBrewer, Hmisc, DescTools)
-
-
-####==========================================================
-### WORKING DIRECTORY
-setwd('/cloud/project/')
 
 
 ####==========================================================
@@ -24,7 +19,7 @@ setwd('/cloud/project/')
 ## Read text files and create temporal data frames for
 ## ...correlation
 if (!exists('total')){
-  total <- read.csv("/cloud/project/ROI-FC-all.csv",
+  total <- read.csv("../ROI-FC-all.csv",
            header = T, row.names = 1)
 }
 
@@ -38,8 +33,14 @@ total_long <- pivot_longer(total, names_to = "ROI_pair",
              cols = LINS_LIFG:RINS_RIFG,
              values_to = "Z_FC")
 
-# baseline
-total_long_t0 <- total_long[which(total_long$timepoint==1), ]
+# baseline (T0)
+ # All (including MCI)
+total_long_t0_all <- total_long[which(total_long$timepoint==1), ]
+ # Only SCD and CON
+total_long_t0 <- total_long[which(total_long$timepoint==1 &
+                                    total_long$is_SCD!="MCI"), ]
+total_long_t0$is_SCD <- factor(total_long_t0$is_SCD,
+                               levels = c("SCD", "CON"))
 
 # T1
 total_long_t1 <- total_long[which(total_long$timepoint==2), ]
@@ -54,10 +55,11 @@ total_long_t2$is_SCD <- factor(total_long_t2$is_SCD,
 
 ####==========================================================
 ### PLOTTING
-## Box plots of ROI-to-ROI FC per SCD group
+## Box plots of ROI-to-ROI FC per SCD group per time point
 
-# Baseline
-ggplot(total_long_t0,
+# Baseline (T0)
+ # All
+ggplot(total_long_t0_all,
        aes(x=reorder(ROI_pair, Z_FC, FUN = median), y=Z_FC,
            fill=is_SCD)) + 
   geom_boxplot() + scale_fill_manual(values=c(
@@ -70,7 +72,24 @@ ggplot(total_long_t0,
                          axis.text=element_text(size=12)
                          ) + geom_vline(xintercept = 0.5:20,
                                         color = "gray")
-ggsave("/cloud/project/figures/boxplot_T0.jpg", width = 30,
+ggsave("../figures/boxplot_T0_all.jpg", width = 30,
+       height = 20, units = "cm", dpi = 400)
+
+  # Without MCI (SCD and CON only)
+ggplot(total_long_t0,
+       aes(x=reorder(ROI_pair, Z_FC, FUN = median), y=Z_FC,
+           fill=is_SCD)) + 
+  geom_boxplot() + scale_fill_manual(values=c(
+    "tomato", "yellow")
+  ) + xlab("ROI pairs") + ylab(
+    "Functional connectivity (Z)"
+  ) + theme_bw() + ylim(-1, 3
+  ) + theme(panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank(),
+            axis.text=element_text(size=12)
+  ) + geom_vline(xintercept = 0.5:20,
+                 color = "gray")
+ggsave("../figures/boxplot_T0_all.jpg", width = 30,
        height = 20, units = "cm", dpi = 400)
 
 # T1
@@ -86,7 +105,7 @@ ggplot(total_long_t1,
 panel.grid.minor = element_blank(),
 axis.text=element_text(size=12)) + geom_vline(xintercept = 0.5:20,
                                                  color = "gray")
-ggsave("/cloud/project/figures/boxplot_T1.jpg", width = 30,
+ggsave("../figures/boxplot_T1.jpg", width = 30,
        height = 20, units = "cm", dpi = 400)
 
 # T2
@@ -106,10 +125,11 @@ ggplot(total_long_t2,
 ggsave("/cloud/project/figures/boxplot_T2.jpg", width = 30,
        height = 20, units = "cm", dpi = 400)
 
-#SUMMARY
 
-ggplot(total_t1,
-       aes(x=is_SCD, y=SN_FC_2,
+# Average FC
+
+ggplot(total,
+       aes(x=is_SCD, y=SN_FC,
            fill=is_SCD)) +
        #) + geom_violin(scale="count",
                                        #color = "gray") +
@@ -127,93 +147,3 @@ ggplot(total_t1,
                  ))
 ggsave("/cloud/project/figures/boxplot_avr_T1.jpg", width = 30,
        height = 20, units = "cm", dpi = 400)
-
-
-####==========================================================
-## OTHER TYPES OF PLOT WITH NATIVE FUNCTION
-# Overall long
-par(mar=c(3,4,3,1))
-myplot <- boxplot(Z_FC ~ is_SCD*ROI_pair*timepoint,
-                  data=total_long,
-                  boxwex=0.4,
-                  ylab="ROI to ROI FC (Z value)",
-                  xlab="ROI pair",
-                  main="Salience Network ROIs FC" , 
-                  col=c("slateblue1", "tomato", "yellow"),  
-                  xaxt="n")
-my_names <- sapply(strsplit(myplot$names, '\\.'),
-                   function(x) x[[2]] )
-my_names <- my_names[seq(1, length(my_names), 3)]
-axis(1, at = seq(2, 30, 3), 
-     labels = my_names, 
-     tick=F , cex=1)
-  # gray vertical lines
-for(i in seq(0.5, 30.5, 3)){ 
-  abline(v=i,lty=1, col="grey")
-}
-  # legend
-legend(27, 2.6,
-       legend = c("MCI", "SCD", "CON"), 
-       col=c("slateblue1" , "tomato", "yellow"),
-       pch = 15, bty = "n", bg = "white",
-       pt.cex = 1.5, cex = 1.5,
-       inset = c(0.1, 0.1), x.intersp = 0.3,
-       y.intersp = 0.6)
-
-# Baseline
-par(mar=c(3,4,3,1))
-myplot <- boxplot(Z_FC ~ is_SCD*ROI_pair,
-                  data=total_long_t0,
-                  boxwex=0.4,
-                  ylab="ROI to ROI FC (Z value)",
-                  xlab="ROI pair",
-                  main="Salience Network ROIs FC baseline" , 
-                  col=c("slateblue1" , "tomato", "yellow"),  
-                  xaxt="n")
-my_names <- sapply(strsplit(myplot$names, '\\.'),
-                   function(x) x[[2]] )
-my_names <- my_names[seq(1, length(my_names), 3)]
-axis(1, at = seq(2, 30, 3), 
-     labels = my_names, 
-     tick=F , cex=1)
-# gray vertical lines
-for(i in seq(0.5, 30.5, 3)){ 
-  abline(v=i,lty=1, col="grey")
-}
-# legend
-legend(26.5, 2.2,
-       legend = c("MCI", "SCD", "CON"), 
-       col=c("slateblue1" , "tomato", "yellow"),
-       pch = 15, bty = "n", bg = "white",
-       pt.cex = 1.5, cex = 1.5,
-       inset = c(0.1, 0.1), x.intersp = 0.3,
-       y.intersp = 0.6)
-
-# T1
-par(mar=c(3,4,3,1))
-myplot <- boxplot(Z_FC ~ is_SCD*ROI_pair,
-                  data=total_long_t1,
-                  boxwex=0.4,
-                  ylab="ROI to ROI FC (Z value)",
-                  xlab="ROI pair",
-                  main="Salience Network ROIs FC T1" , 
-                  col=c("tomato", "yellow"),  
-                  xaxt="n")
-my_names <- sapply(strsplit(myplot$names, '\\.'),
-                   function(x) x[[2]] )
-my_names <- my_names[seq(1, length(my_names), 2)]
-axis(1, at = seq(1.5, 20, 2), 
-     labels = my_names, 
-     tick=F , cex=1)
-# gray vertical lines
-for(i in seq(0.5, 20.5, 2)){ 
-  abline(v=i,lty=1, col="grey")
-}
-# legend
-legend(17.7, 2.2,
-       legend = c("SCD", "CON"), 
-       col=c("tomato", "yellow"),
-       pch = 15, bty = "n", bg = "white",
-       pt.cex = 1.5, cex = 1.5,
-       inset = c(0.1, 0.1), x.intersp = 0.3,
-       y.intersp = 0.6)
