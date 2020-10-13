@@ -16,20 +16,23 @@
 
 ####==========================================================
 ### WORKING DIRECTORY
-setwd('/cloud/project/')
+setwd(paste('/Users/lmuresearchfellowship/Documents/',
+  'Adriana/LMUFellowship/Projects/Goal_A/',
+  sep = ""))
 
 
 ####==========================================================
-### REQUIRED FILES
+### MAIN FILE
 ## Read text files and create temporal data frames for
 ## ...correlation
 
 # "Total" file in wide format
 if (!exists('total')){
-  total <- read.csv("/cloud/project/ROI-FC-all.csv",
+  total <- read.csv("ROI-FC-all.csv",
            header = T, row.names = 1)
 }
 
+# Adjust total if retrieved from read.csv
 total$filename <- factor(substr(total$filename, 1, 12))
 total$is_SCD <- factor(total$is_SCD)
 levels(total$is_SCD)["SCD"] <- "SCD"
@@ -38,15 +41,24 @@ levels(total$is_SCD)["MCI"] <- "MCI"
 total$is_SCD <- factor(total$is_SCD,
                        levels = c("MCI", "SCD", "CON"))
 
-# "Total" file in wide format separately for each time point
+
+####==========================================================
+### TIME POINT FILES
+
+## "Total" file in wide format separately for each time point
+  # Baseline (T0)
 total_t0 <- total[which(total$timepoint==1),]
   rownames(total_t0) <- NULL
+
+  # T1
 total_t1 <- total[which(total$timepoint==2),]
   rownames(total_t1) <- NULL
   levels(total_t1$is_SCD)["SCD"] <- "SCD"
   levels(total_t1$is_SCD)["CON"] <- "CON"
   total_t1$is_SCD <- factor(total_t1$is_SCD,
                             levels = c("SCD", "CON"))
+  
+  # T2
 total_t2 <- total[which(total$timepoint==3),]
   rownames(total_t2) <- NULL
   levels(total_t2$is_SCD)["SCD"] <- "SCD"
@@ -54,7 +66,7 @@ total_t2 <- total[which(total$timepoint==3),]
   total_t2$is_SCD <- factor(total_t2$is_SCD,
                             levels = c("SCD", "CON"))
 
-# Adjust column names
+## Adjust column names for each time point file
   # T0
 colnames(total_t0)[4:14] <- paste(
   colnames(total_t0)[4:14], 1, sep = "_")
@@ -67,28 +79,37 @@ colnames(total_t1)[4:14] <- paste(
 colnames(total_t2)[4:14] <- paste(
   colnames(total_t2)[4:14], 3, sep = "_")
 
-# Delete "timepoint" column (column 3)
+## Delete "timepoint" column (column 3)
+  # T0
 total_t0 <- total_t0[, -which(
   colnames(total_t0)=="timepoint")]
+
+  # T1
 total_t1 <- total_t1[, -which(
   colnames(total_t1)=="timepoint")]
+
+  # T2
 total_t2 <- total_t2[, -which(
   colnames(total_t2)=="timepoint")]
 
-# Delete MCI participants for 3-way mixed ANOVA
+# Delete MCI participants from T0 for 3-way mixed ANOVA
 total_t0 <- data.frame(total_t0[-which(
   total_t0$is_SCD=='MCI'),])
 total_t0$is_SCD <- factor(total_t0$is_SCD,
                             levels = c("SCD", "CON"))
 rownames(total_t0) <- NULL
 
-# Set "filename" column to having the same name across...
+## Set "filename" column to having the same name across...
 # ...data frames
 total_t0$filename <- substr(total_t0$filename, 1, 12)
 total_t1$filename <- substr(total_t1$filename, 1, 12)
 total_t2$filename <- substr(total_t2$filename, 1, 12)
 
-# Merge data frames according to file names (2 steps)
+
+####==========================================================
+### WIDE FORMAT
+
+## Merge data frames according to file names (2 steps)
 temp <- merge(data.frame(total_t0, row.names=NULL),
                data.frame(total_t1, row.names=NULL),
                by = "filename",
@@ -99,7 +120,7 @@ total_wide <- merge(data.frame(temp, row.names=NULL),
               by = "filename",
               all = TRUE)
 
-# Adjust column names, especially to remove duplicates
+## Adjust column names, especially to remove duplicates
 total_wide <- total_wide[, -which(
   grepl(".y", colnames(total_wide))==TRUE)]
 
@@ -109,7 +130,7 @@ colnames(total_wide)[which(
 total_wide <- total_wide[, -which(
   duplicated(colnames(total_wide))==TRUE)]
 
-# Create one data frame for the average FC (in case needed)
+## Create one separate data frame for the average FC
 total_wide_fc_sn <- total_wide[, c(1, 2, which(
   grepl("SN_FC_", colnames(total_wide))==TRUE))]
 
@@ -121,7 +142,8 @@ rm(temp)
 
 
 ####==========================================================
-### THREE-WAY MIXED ANOVA
+### THREE-WAY MIXED ANOVA ACROSS ROIS
+### WS: time point and ROI / BS: SCD
 
 ## Prepare the data
   # Convert data frame to long format
@@ -161,6 +183,36 @@ get_anova_table(res.aov.total_all_long, correction = "auto")
 
 
 ####==========================================================
+### TWO-WAY MIXED ANOVA AVERAGE FC
+### WS: time point / BS: SCD (same as the previous section)
+
+## Prepare the data
+# Convert data frame to long format
+total_long_fc_sn <- pivot_longer(
+  total_wide_fc_sn,
+  names_to = "timepoint",
+  cols = SN_FC_1:SN_FC_3,
+  values_to = "Z_FC")
+
+# Make some adjustments to the new data frame
+total_long_fc_sn <- data.frame(total_long_fc_sn)
+total_long_fc_sn$filename <- factor(total_long_fc_sn$filename)
+
+# Create a column for time point
+total_long_fc_sn$timepoint <- as.factor(substr(total_long_fc_sn$timepoint,
+                                               7, 7))
+
+## Actual ANOVA
+res.aov.total_long_fc_sn <- anova_test(data = total_long_fc_sn,
+                                     dv = Z_FC,
+                                     wid = filename,
+                                     between = is_SCD,
+                                     within = timepoint,
+                                     effect.size = "pes")
+get_anova_table(res.aov.total_long_fc_sn, correction = "auto")
+
+
+####==========================================================
 ### DATA PREPARATION FOR SEPARATE MIXED ANOVAS
 ### ...WITHIN EACH TIME POINT
 
@@ -176,12 +228,18 @@ total_long$ROI_pair <- factor(total_long$ROI_pair)
 total_long$timepoint <- factor(total_long$timepoint)
 
 # Baseline / T0
-total_long_t0 <- data.frame(total_long[which(
+total_long_t0_all <- data.frame(total_long[which(
   total_long$timepoint==1), ])
 total_long_t0$filename <- factor(
   total_long_t0$filename)
 total_long_t0$ROI_pair <- factor(
   total_long_t0$ROI_pair)
+
+# Only SCD and CON
+total_long_t0 <- total_long[which(total_long$timepoint==1 &
+                                    total_long$is_SCD!="MCI"), ]
+total_long_t0$is_SCD <- factor(total_long_t0$is_SCD,
+                               levels = c("SCD", "CON"))
 
 # T1
 total_long_t1 <- data.frame(total_long[which(
@@ -258,7 +316,7 @@ total_long$is_SCD <- factor(total_long$is_SCD,
                             levels = c("SCD", "CON"))
 rownames(total_long) <- NULL
 
-res.aov.baseline <- anova_test(data = total_long_t0_noMCI,
+res.aov.baseline <- anova_test(data = total_long_t0,
                              dv = Z_FC,
                              wid = filename,
                              between = is_SCD,
@@ -299,7 +357,7 @@ write.table(res.aov.t2$ANOVA,
 ## One-way ANOVA to study significant interaction effects
 
 # Within each WS group, comparing between subjects (BS)
-bs <- total_long_t0_noMCI %>%
+bs <- total_long_t0 %>%
   group_by(ROI_pair) %>%
   anova_test(dv = Z_FC, wid = filename,
              between = is_SCD) %>%
