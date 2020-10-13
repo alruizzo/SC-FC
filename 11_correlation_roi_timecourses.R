@@ -1,22 +1,24 @@
 ####========================================= A.L.R.R.2020 - 2021
 ### DESCRIPTION
 ## This script performs correlations between ROI time courses
-## ...derived from 'meants' as well as 'dual regression'
+## ...derived from FSL's meants'
 
 
 ####==========================================================
 ### INSTALL PACKAGES
-#install.packages("pacman")
-#require(pacman)
-# pacman::p_load(ggplot2, dplyr, ggthemes, ggvis, plotly, rio,
-#                stringr, tidyr, readxl, xlsx, ggpubr, psych,
-#                car, tidyverse, rstatix, cocor, ppcor,
-#                RColorBrewer, Hmisc, DescTools)
+## The package 'psych' is especially necessary for the...
+## ...Fisher-Z function
+install.packages("pacman")
+require(pacman)
+pacman::p_load(ggplot2, dplyr, ggthemes, ggvis, plotly,
+                rio, stringr, tidyr, readxl, ggpubr, 
+                psych, car, tidyverse, rstatix, R.utils)
 
 
 ####==========================================================
 ### WORKING DIRECTORY
-setwd('/cloud/project/timecourses/')
+setwd(paste('~/Documents/Adriana/LMUFellowship/Projects/',
+            'Goal_A/timecourses', sep=""))
 
 
 ####==========================================================
@@ -56,28 +58,24 @@ rownames(total) <- NULL
 # populate that data frame by creating individual ones
 for (i in filenames) {
   temp <- read.table(i, header=T)
-  #exclude cerebellum ROIs:
-  temp <- temp[, -grep("CBL_gm.txt", colnames(temp))]
-  #exclude WM and CSF:
-  temp <- temp[, grep("_gm.txt", colnames(temp))]
   #variance normalize time series:
   temp <- data.frame(scale(temp))
   #correlation matrix:
   temp_mat <- data.frame(cor(temp))
-  Ztemp_mat <- FisherZ(temp_mat) #Fisher z transformation
+  Ztemp_mat <- fisherz(temp_mat) #Fisher z transformation
   #delete one side of diagonal:
   Ztemp_mat[upper.tri(Ztemp_mat)] <- 0
   #convert Inf values (diag) to zero:
   Ztemp_mat[!lower.tri(Ztemp_mat)] <- 0
   for (j in names(Ztemp_mat)) { #select column to delete
     #message(j)
-    y <- ifelse(length(IsZero(
+    y <- ifelse(length(isZero(
       Ztemp_mat[[j]]))==nrow(Ztemp_mat), j, 0)
   }
   rm(j)
   #reduce Z matrix:
   Ztemp_mat <- Ztemp_mat[-which(
-    IsZero(Ztemp_mat[1,1])==TRUE), -which(
+    isZero(Ztemp_mat[1,1])==TRUE), -which(
       colnames(Ztemp_mat)==y)]
   rm(y)
   #pass info on to a "total", summary data frame:
@@ -161,4 +159,4 @@ total$SN_FC <- (total$LINS_LIFG +
                   total$RINS_RIFG) /10
 
 # save to txt
-write.csv(total, file = "/cloud/project/ROI-FC-all.csv")
+write.csv(total, file = "../ROI-FC-all.csv")
