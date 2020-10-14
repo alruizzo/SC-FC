@@ -6,12 +6,12 @@
 
 ####==========================================================
 ### INSTALL PACKAGES
-#install.packages("pacman")
-#require(pacman)
-# pacman::p_load(ggplot2, dplyr, ggthemes, ggvis, plotly, rio,
-#                stringr, tidyr, readxl, xlsx, ggpubr, psych,
-#                car, tidyverse, rstatix, cocor, ppcor,
-#                RColorBrewer, Hmisc, DescTools)
+# install.packages("pacman")
+# require(pacman)
+# pacman::p_load(ggplot2, dplyr, ggthemes, ggvis, plotly,
+#                rio, stringr, tidyr, readxl, ggpubr,
+#                psych, car, tidyverse, rstatix, cocor,
+#                ppcor, RColorBrewer, Hmisc, DescTools)
 
 
 ####==========================================================
@@ -93,6 +93,7 @@ total_t2 <- total_t2[, -which(
   colnames(total_t2)=="timepoint")]
 
 # Delete MCI participants from T0 for 3-way mixed ANOVA
+total_t0_all <- total_t0
 total_t0 <- data.frame(total_t0[-which(
   total_t0$is_SCD=='MCI'),])
 total_t0$is_SCD <- factor(total_t0$is_SCD,
@@ -108,25 +109,32 @@ total_t2$filename <- substr(total_t2$filename, 1, 12)
 
 ####==========================================================
 ### WIDE FORMAT
+## This format is necessary because of the way how I...
+## ...exported the values and how they need to be...
+## ...transformed in the next step (long format)
 
 ## Merge data frames according to file names (2 steps)
+  # Create temporal file to merge first part
 temp <- merge(data.frame(total_t0, row.names=NULL),
                data.frame(total_t1, row.names=NULL),
                by = "filename",
                all = TRUE)
-
+  # Merge temporal file with second part
 total_wide <- merge(data.frame(temp, row.names=NULL),
               data.frame(total_t2, row.names=NULL),
               by = "filename",
               all = TRUE)
 
 ## Adjust column names, especially to remove duplicates
+  # Remove the ".y" part from the column names
 total_wide <- total_wide[, -which(
   grepl(".y", colnames(total_wide))==TRUE)]
 
+  # Remove the .x from the "is_SCD" variable
 colnames(total_wide)[which(
   colnames(total_wide)=="is_SCD.x")] <- "is_SCD"
-
+  
+  # Remove duplicated variables
 total_wide <- total_wide[, -which(
   duplicated(colnames(total_wide))==TRUE)]
 
@@ -134,16 +142,18 @@ total_wide <- total_wide[, -which(
 total_wide_fc_sn <- total_wide[, c(1, 2, which(
   grepl("SN_FC_", colnames(total_wide))==TRUE))]
 
-# Delete the average FC columns from "total_wide"
+## Delete the average FC columns from "total_wide"
 total_wide <- total_wide[, -which(
   grepl("SN_FC_", colnames(total_wide))==TRUE)]
 
+## Remove the previously-created "temp" to clean work space
 rm(temp)
 
 
 ####==========================================================
 ### THREE-WAY MIXED ANOVA ACROSS ROIS
-### WS: time point and ROI / BS: SCD
+## WS: time point and ROI / BS: SCD
+## DV: Z_FC
 
 ## Prepare the data
   # Convert data frame to long format
@@ -184,7 +194,8 @@ get_anova_table(res.aov.total_all_long, correction = "auto")
 
 ####==========================================================
 ### TWO-WAY MIXED ANOVA AVERAGE FC
-### WS: time point / BS: SCD (same as the previous section)
+## WS: time point / BS: SCD (same as the previous section)
+## DV: Z_FC
 
 ## Prepare the data
 # Convert data frame to long format
@@ -196,19 +207,21 @@ total_long_fc_sn <- pivot_longer(
 
 # Make some adjustments to the new data frame
 total_long_fc_sn <- data.frame(total_long_fc_sn)
-total_long_fc_sn$filename <- factor(total_long_fc_sn$filename)
+total_long_fc_sn$filename <- factor(
+  total_long_fc_sn$filename)
 
 # Create a column for time point
-total_long_fc_sn$timepoint <- as.factor(substr(total_long_fc_sn$timepoint,
-                                               7, 7))
+total_long_fc_sn$timepoint <- as.factor(substr(
+  total_long_fc_sn$timepoint, 7, 7))
 
 ## Actual ANOVA
-res.aov.total_long_fc_sn <- anova_test(data = total_long_fc_sn,
-                                     dv = Z_FC,
-                                     wid = filename,
-                                     between = is_SCD,
-                                     within = timepoint,
-                                     effect.size = "pes")
+res.aov.total_long_fc_sn <- anova_test(
+  data = total_long_fc_sn,
+  dv = Z_FC,
+  wid = filename,
+  between = is_SCD,
+  within = timepoint,
+  effect.size = "pes")
 get_anova_table(res.aov.total_long_fc_sn, correction = "auto")
 
 
@@ -228,14 +241,15 @@ total_long$ROI_pair <- factor(total_long$ROI_pair)
 total_long$timepoint <- factor(total_long$timepoint)
 
 # Baseline / T0
+  # All
 total_long_t0_all <- data.frame(total_long[which(
   total_long$timepoint==1), ])
-total_long_t0$filename <- factor(
-  total_long_t0$filename)
-total_long_t0$ROI_pair <- factor(
-  total_long_t0$ROI_pair)
+total_long_t0_all$filename <- factor(
+  total_long_t0_all$filename)
+total_long_t0_all$ROI_pair <- factor(
+  total_long_t0_all$ROI_pair)
 
-# Only SCD and CON
+  # Only SCD and CON
 total_long_t0 <- total_long[which(total_long$timepoint==1 &
                                     total_long$is_SCD!="MCI"), ]
 total_long_t0$is_SCD <- factor(total_long_t0$is_SCD,
@@ -316,15 +330,17 @@ total_long$is_SCD <- factor(total_long$is_SCD,
                             levels = c("SCD", "CON"))
 rownames(total_long) <- NULL
 
+  # ANOVA
 res.aov.baseline <- anova_test(data = total_long_t0,
                              dv = Z_FC,
                              wid = filename,
                              between = is_SCD,
                              within = ROI_pair,
                              effect.size = "pes")
-get_anova_table(res.aov.baseline, correction = "auto")
-write.table(res.aov.baseline$ANOVA,
-     file = "/cloud/project/figures/baseline_ANOVA.txt",
+anovat <- get_anova_table(res.aov.baseline,
+                          correction = "auto")
+write.table(anovat,
+     file = "baseline_ANOVA.txt",
      quote = F, sep = " | ", row.names = F)
 
 # T1
@@ -334,9 +350,10 @@ res.aov.t1 <- anova_test(data = total_long_t1,
                                between = is_SCD,
                                within = ROI_pair,
                                effect.size = "pes")
-get_anova_table(res.aov.t1, correction = "auto")
-write.table(res.aov.t1$ANOVA,
-            file = "/cloud/project/figures/t1_ANOVA.txt",
+anovat <- get_anova_table(res.aov.t1,
+                          correction = "auto")
+write.table(anovat,
+            file = "t1_ANOVA.txt",
             quote = F, sep = " | ", row.names = F)
 
 # T2
@@ -346,17 +363,34 @@ res.aov.t2 <- anova_test(data = total_long_t2,
                          between = is_SCD,
                          within = ROI_pair,
                          effect.size = "pes")
-get_anova_table(res.aov.t2, correction = "auto")
-write.table(res.aov.t2$ANOVA,
-            file = "/cloud/project/figures/t2_ANOVA.txt",
+anovat <- get_anova_table(res.aov.t2,
+                          correction = "auto")
+write.table(anovat,
+            file = "t2_ANOVA.txt",
             quote = F, sep = " | ", row.names = F)
 
 
 ####==========================================================
-### FOLLOW-UP ONE-WAY ANOVAS
-## One-way ANOVA to study significant interaction effects
+### FOLLOW-UP ONE-WAY ANOVAS BETWEEN GROUPS (SCD)
+## One-way ANOVA to study significant interaction effects...
+## ...separately per time point
 
-# Within each WS group, comparing between subjects (BS)
+## Average SN FC
+# Within each WS condition, comparing between subjects (BS)
+bs <- total_long_fc_sn %>%
+  group_by(timepoint) %>%
+  anova_test(dv = Z_FC, wid = filename,
+             between = is_SCD) %>%
+  get_anova_table() %>% adjust_pvalue(
+    method = "bonferroni")
+write.csv(bs,
+          file = paste("/figures/",
+                       "oneway_baseline_ANOVA_avr_fc_sn.csv"),
+          quote = F, row.names = F)
+
+## ROIs
+# Within each WS condition, comparing between subjects (BS)
+  # Baseline (T0)
 bs <- total_long_t0 %>%
   group_by(ROI_pair) %>%
   anova_test(dv = Z_FC, wid = filename,
@@ -364,22 +398,104 @@ bs <- total_long_t0 %>%
   get_anova_table() %>% adjust_pvalue(
     method = "bonferroni")
 write.csv(bs,
-            file = paste("/cloud/project/figures/",
+            file = paste("/figures/",
             "oneway_baseline_ANOVA.csv"),
             quote = F, row.names = F)
 
-## Within each BS group, comparing within subjects 
+  # T1
+bs <- total_long_t1 %>%
+  group_by(ROI_pair) %>%
+  anova_test(dv = Z_FC, wid = filename,
+             between = is_SCD) %>%
+  get_anova_table() %>% adjust_pvalue(
+    method = "bonferroni")
+write.csv(bs,
+          file = paste("/figures/",
+                       "oneway_t1_ANOVA.csv"),
+          quote = F, row.names = F)
+
+  # T2
+bs <- total_long_t2 %>%
+  group_by(ROI_pair) %>%
+  anova_test(dv = Z_FC, wid = filename,
+             between = is_SCD) %>%
+  get_anova_table() %>% adjust_pvalue(
+    method = "bonferroni")
+write.csv(bs,
+          file = paste("/figures/",
+                       "oneway_t2_ANOVA.csv"),
+          quote = F, row.names = F)
+
+
+####==========================================================
+### FOLLOW-UP ONE-WAY ANOVAS WITHIN CONDITIONS (ROIs)
+## One-way ANOVA to study significant interaction effects...
+## separately per time point
+
+## Average FC
+ws <- total_long_fc_sn %>%
+  group_by(is_SCD) %>%
+  anova_test(dv = Z_FC, wid = filename,
+             within = timepoint, effect.size = "pes") %>%
+  get_anova_table() %>% adjust_pvalue(
+    method = "bonferroni")
+ws
+
+## ROIs
+## Within each BS group, comparing within conditions 
+  # Baseline (T0)
+ws <- total_long_t0 %>%
+  group_by(is_SCD) %>%
+  anova_test(dv = Z_FC, wid = filename,
+             within = ROI_pair, effect.size = "pes") %>%
+  get_anova_table() %>% adjust_pvalue(
+    method = "bonferroni")
+ws  
+
+  # T1
+ws <- total_long_t1 %>%
+  group_by(is_SCD) %>%
+  anova_test(dv = Z_FC, wid = filename,
+             within = ROI_pair, effect.size = "pes") %>%
+  get_anova_table() %>% adjust_pvalue(
+    method = "bonferroni")
+ws
+
+  # T2
 ws <- total_long_t2 %>%
   group_by(is_SCD) %>%
   anova_test(dv = Z_FC, wid = filename,
              within = ROI_pair, effect.size = "pes") %>%
   get_anova_table() %>% adjust_pvalue(
     method = "bonferroni")
+ws
 
-## Pairwise t-tests
+
+####==========================================================
+### FOLLOW-UP PAIRWISE T-TESTS OF ROI PAIRS ACROSS TIMEPOINTS
+## Pairwise t-tests to obtain greater detail into the...
+## ...differences
+
+  # Baseline (T0)
+pwc <- total_long_t0 %>% 
+  pairwise_t_test(
+    Z_FC ~ ROI_pair, pool.sd = FALSE,
+    p.adjust.method = "bonferroni"
+  )
+pwc[which(pwc$p.adj.signif!="ns"),]
+
+  # T1
+pwc <- total_long_t1 %>% 
+  pairwise_t_test(
+    Z_FC ~ ROI_pair, pool.sd = FALSE,
+    p.adjust.method = "bonferroni"
+  )
+pwc[which(pwc$p.adj.signif!="ns"),]
+
+  # T2
 pwc <- total_long_t2 %>% 
   pairwise_t_test(
     Z_FC ~ ROI_pair, pool.sd = FALSE,
     p.adjust.method = "bonferroni"
   )
-pwc
+pwc[which(pwc$p.adj.signif!="ns"),]
