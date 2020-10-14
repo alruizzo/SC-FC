@@ -1,7 +1,8 @@
 ####========================================= A.L.R.R.2020 - 2021
 ### DESCRIPTION
 ## This script performs group comparisons between the ROI Z-
-## ...transformed correlations
+## ...transformed correlations. It comes from the "group_...
+## ...comparisons.R" script.
 
 
 ####==========================================================
@@ -12,45 +13,6 @@
 #                rio, stringr, tidyr, readxl, ggpubr,
 #                psych, car, tidyverse, rstatix,
 #                RColorBrewer, Hmisc, DescTools)
-
-
-####==========================================================
-### REQUIRED FILES
-## Read text files and create temporal data frames for
-## ...correlation
-if (!exists('total')){
-  total <- read.csv("../ROI-FC-all.csv",
-           header = T, row.names = 1)
-}
-
-
-####==========================================================
-### REPEATED MEASURES
-## Transform data frame for repeated measures
-
-# overall long
-total_long <- pivot_longer(total, names_to = "ROI_pair",
-             cols = LINS_LIFG:RINS_RIFG,
-             values_to = "Z_FC")
-
-# baseline (T0)
- # All (including MCI)
-total_long_t0_all <- total_long[which(total_long$timepoint==1), ]
- # Only SCD and CON
-total_long_t0 <- total_long[which(total_long$timepoint==1 &
-                                    total_long$is_SCD!="MCI"), ]
-total_long_t0$is_SCD <- factor(total_long_t0$is_SCD,
-                               levels = c("SCD", "CON"))
-
-# T1
-total_long_t1 <- total_long[which(total_long$timepoint==2), ]
-total_long_t1$is_SCD <- factor(total_long_t1$is_SCD,
-                               levels = c("SCD", "CON"))
-
-# T2
-total_long_t2 <- total_long[which(total_long$timepoint==3), ]
-total_long_t2$is_SCD <- factor(total_long_t2$is_SCD,
-                               levels = c("SCD", "CON"))
 
 
 ####==========================================================
@@ -126,10 +88,11 @@ ggsave("/cloud/project/figures/boxplot_T2.jpg", width = 30,
        height = 20, units = "cm", dpi = 400)
 
 
-# Average FC
+## Box plots of average SN FC per time point
 
-ggplot(total,
-       aes(x=is_SCD, y=SN_FC,
+  # Average FC T0
+ggplot(total_t0,
+       aes(x=is_SCD, y=SN_FC_1,
            fill=is_SCD)) +
        #) + geom_violin(scale="count",
                                        #color = "gray") +
@@ -145,5 +108,47 @@ ggplot(total,
                  position = position_jitterdodge(
                    jitter.width = 0.1
                  ))
-ggsave("/cloud/project/figures/boxplot_avr_T1.jpg", width = 30,
+ggsave("../figures/boxplot_avr_T0.jpg", width = 30,
+       height = 20, units = "cm", dpi = 400)
+
+  # Average FC T1
+ggplot(total_t1,
+       aes(x=is_SCD, y=SN_FC_2,
+           fill=is_SCD)) +
+  #) + geom_violin(scale="count",
+  #color = "gray") +
+  geom_boxplot(#width = 0.5/length(unique(total_t1$is_SCD))
+  ) + scale_fill_manual(values=c(
+    "tomato", "yellow")
+  ) + ylab("Average Functional Connectivity (Z)"
+  ) + theme_bw() + ylim(0, 1.5
+  ) + theme(axis.text=element_text(size=12),
+            axis.title.x=element_blank()
+  ) + geom_point(aes(fill = is_SCD), size = 2,
+                 shape = 23, alpha = 0.5,
+                 position = position_jitterdodge(
+                   jitter.width = 0.1
+                 ))
+ggsave("../figures/boxplot_avr_T1.jpg", width = 30,
+       height = 20, units = "cm", dpi = 400)
+
+  # Average FC T2
+ggplot(total_t2,
+       aes(x=is_SCD, y=SN_FC_3,
+           fill=is_SCD)) +
+  #) + geom_violin(scale="count",
+  #color = "gray") +
+  geom_boxplot(#width = 0.5/length(unique(total_t1$is_SCD))
+  ) + scale_fill_manual(values=c(
+    "tomato", "yellow")
+  ) + ylab("Average Functional Connectivity (Z)"
+  ) + theme_bw() + ylim(0, 1.5
+  ) + theme(axis.text=element_text(size=12),
+            axis.title.x=element_blank()
+  ) + geom_point(aes(fill = is_SCD), size = 2,
+                 shape = 23, alpha = 0.5,
+                 position = position_jitterdodge(
+                   jitter.width = 0.1
+                 ))
+ggsave("../figures/boxplot_avr_T2.jpg", width = 30,
        height = 20, units = "cm", dpi = 400)
