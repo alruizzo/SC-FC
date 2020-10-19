@@ -26,13 +26,13 @@ setwd(paste('/Users/lmuresearchfellowship/Documents/',
 ## Read text files and create temporal data frames for
 ## ...correlation
 
-# "Total" file in wide format
+  # "Total" file in wide format
 if (!exists('total')){
   total <- read.csv("ROI-FC-all.csv",
            header = T, row.names = 1)
 }
 
-# Adjust total if retrieved from read.csv
+  # Adjust total if retrieved from read.csv
 total$filename <- factor(substr(total$filename, 1, 12))
 total$is_SCD <- factor(total$is_SCD)
 levels(total$is_SCD)["SCD"] <- "SCD"
@@ -40,6 +40,106 @@ levels(total$is_SCD)["CON"] <- "CON"
 levels(total$is_SCD)["MCI"] <- "MCI"
 total$is_SCD <- factor(total$is_SCD,
                        levels = c("MCI", "SCD", "CON"))
+
+  # Adjust total to excluding MCI
+total_MCI <- total
+total <- total[-which(total$is_SCD=="MCI"),]
+total$is_SCD <- factor(total$is_SCD)
+levels(total$is_SCD)["SCD"] <- "SCD"
+levels(total$is_SCD)["CON"] <- "CON"
+total$is_SCD <- factor(total$is_SCD,
+                       levels = c("SCD", "CON"))
+
+
+####==========================================================
+### PARTICIPANT SELECTION
+## Add demographic information to determine participant...
+## ...exclusion. Note: there might be other important...
+## ...sources of information.
+
+  # Get the demographics file or data frame if existent
+if (!exists('demographics_t0')){
+  demographics_t0 <- data.frame(read_excel(
+    "General/Demographics.xlsx"))
+}
+
+  # Create a participant list to extract info from the...
+  # ...demographics data frame
+part_list <- as.character(unique(total$filename))
+
+  # Make file name in demographics equal to that in total
+demographics_t0$ParticipantID <- gsub("_", "-",
+                                   demographics_t0$ParticipantID)
+
+  # Subset the demographics data frame to include only those
+  # ...for whom data are available
+demographics_t0 <- demographics_t0[
+  demographics_t0$ParticipantID %in% part_list ,]
+
+  # Identify participants to exclude according to:
+    # MMSE <= 25
+MMSE <- demographics_t0$ParticipantID[which(
+  demographics_t0$Mini.Mental.State.Examination.Total.Score....<=25
+  )]
+
+    # Age <= 50
+Age <- demographics_t0$ParticipantID[which(
+  demographics_t0$Age<=50)]
+
+  # Read the file where I wrote the exclusion info from...
+  # ...other sources (i.e., files in the lab)
+exclude <- data.frame(t(data.frame(read.csv("exclude.txt",
+                                            header = T,
+                                            sep = ""))))
+    # Add column with participants' file names
+exclude$participants <- row.names(exclude)
+exclude <- exclude[c(order(exclude$participants)),]
+row.names(exclude) <- NULL
+
+    # Rename participants' file names to match other...
+    # ...data frames (didn't find a more elegant way...
+    # ...to do it so far)
+exclude$participants <- gsub("u.", "u-",
+                             exclude$participants)
+exclude$participants <- gsub("n.", "n-",
+                             exclude$participants)
+exclude$participants <- gsub("i.", "i-",
+                             exclude$participants)
+
+    # Organize this data frame
+colnames(exclude)[1] <- "reason"
+exclude <- exclude[, c("participants", "reason")]
+
+  # Add information extracted from the Demographics...
+  # ...file
+exclude$demographics_t0 <- ""
+exclude$demographics_t0[exclude$participants %in% Age] <-
+  "Age"
+exclude$demographics_t0[exclude$participants %in% MMSE] <-
+  "MMSE"
+
+  # Clean work space
+rm(list = c("Age", "MMSE", "part_list"))
+
+  # Save list of to-be-excluded participants for...
+  # ...the ensuing analyses
+Excluded <- exclude$participants
+
+
+####==========================================================
+### PARTICIPANT EXCLUSION
+## Exclude those participants from total
+
+## Total
+total_orig <- total
+total <- total_orig[-which(
+  total_orig$filename %in% Excluded==TRUE),]
+rownames(total) <- NULL
+
+## Demographics
+demographics_t0 <- demographics_t0[-which(
+  demographics_t0$ParticipantID %in% Excluded==TRUE),]
+rownames(demographics_t0) <- NULL
 
 
 ####==========================================================
@@ -91,14 +191,6 @@ total_t1 <- total_t1[, -which(
   # T2
 total_t2 <- total_t2[, -which(
   colnames(total_t2)=="timepoint")]
-
-# Delete MCI participants from T0 for 3-way mixed ANOVA
-total_t0_all <- total_t0
-total_t0 <- data.frame(total_t0[-which(
-  total_t0$is_SCD=='MCI'),])
-total_t0$is_SCD <- factor(total_t0$is_SCD,
-                            levels = c("SCD", "CON"))
-rownames(total_t0) <- NULL
 
 ## Set "filename" column to having the same name across...
 # ...data frames
@@ -231,7 +323,7 @@ get_anova_table(res.aov.total_long_fc_sn, correction = "auto")
 
 ## Transform data frame for mixed model
 # Total with all time points
-total_long <- pivot_longer(total, names_to = "ROI_pair",
+total_long <- pivot_longer(total_MCI, names_to = "ROI_pair",
                            cols = LINS_LIFG:RINS_RIFG,
                            values_to = "Z_FC")
 total_long <- data.frame(total_long)
@@ -391,6 +483,19 @@ write.csv(bs,
 ## ROIs
 # Within each WS condition, comparing between subjects (BS)
   # Baseline (T0)
+    #All
+bs <- total_long_t0_all %>%
+  group_by(ROI_pair) %>%
+  anova_test(dv = Z_FC, wid = filename,
+             between = is_SCD) %>%
+  get_anova_table() %>% adjust_pvalue(
+    method = "bonferroni")
+write.csv(bs,
+          file = paste("/figures/",
+                       "oneway_baseline_ANOVA_all.csv"),
+          quote = F, row.names = F)
+
+    # SCD-CON
 bs <- total_long_t0 %>%
   group_by(ROI_pair) %>%
   anova_test(dv = Z_FC, wid = filename,
@@ -499,3 +604,142 @@ pwc <- total_long_t2 %>%
     p.adjust.method = "bonferroni"
   )
 pwc[which(pwc$p.adj.signif!="ns"),]
+
+
+####==========================================================
+### PLOTTING
+## Box plots of ROI-to-ROI FC per SCD group per time point
+
+# Baseline (T0)
+# All
+ggplot(total_long_t0_all,
+       aes(x=reorder(ROI_pair, Z_FC, FUN = median), y=Z_FC,
+           fill=is_SCD)) + 
+  geom_boxplot() + scale_fill_manual(values=c(
+    "slateblue1", "tomato", "yellow")
+  ) + xlab("ROI pairs") + ylab(
+    "Functional connectivity (Z)"
+  ) + theme_bw() + ylim(-1, 3
+  ) + theme(panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank(),
+            axis.text=element_text(size=12)
+  ) + geom_vline(xintercept = 0.5:20,
+                 color = "gray")
+ggsave("../figures/boxplot_T0_all.jpg", width = 30,
+       height = 20, units = "cm", dpi = 400)
+
+# Without MCI (SCD and CON only)
+ggplot(total_long_t0,
+       aes(x=reorder(ROI_pair, Z_FC, FUN = median), y=Z_FC,
+           fill=is_SCD)) + 
+  geom_boxplot() + scale_fill_manual(values=c(
+    "tomato", "yellow")
+  ) + xlab("ROI pairs") + ylab(
+    "Functional connectivity (Z)"
+  ) + theme_bw() + ylim(-1, 3
+  ) + theme(panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank(),
+            axis.text=element_text(size=12)
+  ) + geom_vline(xintercept = 0.5:20,
+                 color = "gray")
+ggsave("../figures/boxplot_T0_all.jpg", width = 30,
+       height = 20, units = "cm", dpi = 400)
+
+# T1
+ggplot(total_long_t1,
+       aes(x=reorder(ROI_pair, Z_FC, FUN = median), y=Z_FC,
+           fill=is_SCD)) + 
+  geom_boxplot() + scale_fill_manual(values=c(
+    "tomato", "yellow")
+  ) + xlab("ROI pairs") + ylab(
+    "Functional connectivity (Z)"
+  ) + theme_bw() + ylim(-1, 3
+  ) + theme(panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank(),
+            axis.text=element_text(size=12)) + geom_vline(xintercept = 0.5:20,
+                                                          color = "gray")
+ggsave("../figures/boxplot_T1.jpg", width = 30,
+       height = 20, units = "cm", dpi = 400)
+
+# T2
+ggplot(total_long_t2,
+       aes(x=reorder(ROI_pair, Z_FC, FUN = median), y=Z_FC,
+           fill=is_SCD)) + 
+  geom_boxplot() + scale_fill_manual(values=c(
+    "tomato", "yellow")
+  ) + xlab("ROI pairs") + ylab(
+    "Functional connectivity (Z)"
+  ) + theme_bw() + ylim(-1, 3
+  ) + theme(panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank(),
+            axis.text=element_text(size=12)
+  ) + geom_vline(xintercept = 0.5:20,
+                 color = "gray")
+ggsave("/cloud/project/figures/boxplot_T2.jpg", width = 30,
+       height = 20, units = "cm", dpi = 400)
+
+
+## Box plots of average SN FC per time point
+
+# Average FC T0
+ggplot(total_t0,
+       aes(x=is_SCD, y=SN_FC_1,
+           fill=is_SCD)) +
+  #) + geom_violin(scale="count",
+  #color = "gray") +
+  geom_boxplot(#width = 0.5/length(unique(total_t1$is_SCD))
+  ) + scale_fill_manual(values=c(
+    "tomato", "yellow")
+  ) + ylab("Average Functional Connectivity (Z)"
+  ) + theme_bw() + ylim(0, 1.5
+  ) + theme(axis.text=element_text(size=12),
+            axis.title.x=element_blank()
+  ) + geom_point(aes(fill = is_SCD), size = 2,
+                 shape = 23, alpha = 0.5,
+                 position = position_jitterdodge(
+                   jitter.width = 0.1
+                 ))
+ggsave("../figures/boxplot_avr_T0.jpg", width = 30,
+       height = 20, units = "cm", dpi = 400)
+
+# Average FC T1
+ggplot(total_t1,
+       aes(x=is_SCD, y=SN_FC_2,
+           fill=is_SCD)) +
+  #) + geom_violin(scale="count",
+  #color = "gray") +
+  geom_boxplot(#width = 0.5/length(unique(total_t1$is_SCD))
+  ) + scale_fill_manual(values=c(
+    "tomato", "yellow")
+  ) + ylab("Average Functional Connectivity (Z)"
+  ) + theme_bw() + ylim(0, 1.5
+  ) + theme(axis.text=element_text(size=12),
+            axis.title.x=element_blank()
+  ) + geom_point(aes(fill = is_SCD), size = 2,
+                 shape = 23, alpha = 0.5,
+                 position = position_jitterdodge(
+                   jitter.width = 0.1
+                 ))
+ggsave("../figures/boxplot_avr_T1.jpg", width = 30,
+       height = 20, units = "cm", dpi = 400)
+
+# Average FC T2
+ggplot(total_t2,
+       aes(x=is_SCD, y=SN_FC_3,
+           fill=is_SCD)) +
+  #) + geom_violin(scale="count",
+  #color = "gray") +
+  geom_boxplot(#width = 0.5/length(unique(total_t1$is_SCD))
+  ) + scale_fill_manual(values=c(
+    "tomato", "yellow")
+  ) + ylab("Average Functional Connectivity (Z)"
+  ) + theme_bw() + ylim(0, 1.5
+  ) + theme(axis.text=element_text(size=12),
+            axis.title.x=element_blank()
+  ) + geom_point(aes(fill = is_SCD), size = 2,
+                 shape = 23, alpha = 0.5,
+                 position = position_jitterdodge(
+                   jitter.width = 0.1
+                 ))
+ggsave("../figures/boxplot_avr_T2.jpg", width = 30,
+       height = 20, units = "cm", dpi = 400)
