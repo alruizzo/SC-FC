@@ -41,15 +41,6 @@ levels(total$is_SCD)["MCI"] <- "MCI"
 total$is_SCD <- factor(total$is_SCD,
                        levels = c("MCI", "SCD", "CON"))
 
-  # Adjust total to excluding MCI
-total_MCI <- total
-total <- total[-which(total$is_SCD=="MCI"),]
-total$is_SCD <- factor(total$is_SCD)
-levels(total$is_SCD)["SCD"] <- "SCD"
-levels(total$is_SCD)["CON"] <- "CON"
-total$is_SCD <- factor(total$is_SCD,
-                       levels = c("SCD", "CON"))
-
 
 ####==========================================================
 ### PARTICIPANT SELECTION
@@ -140,6 +131,16 @@ rownames(total) <- NULL
 demographics_t0 <- demographics_t0[-which(
   demographics_t0$ParticipantID %in% Excluded==TRUE),]
 rownames(demographics_t0) <- NULL
+
+## Adjust total to excluding MCI
+total_MCI <- total_orig[-which(
+  total_orig$filename %in% Excluded==TRUE),]
+total <- total[-which(total$is_SCD=="MCI"),]
+total$is_SCD <- factor(total$is_SCD)
+levels(total$is_SCD)["SCD"] <- "SCD"
+levels(total$is_SCD)["CON"] <- "CON"
+total$is_SCD <- factor(total$is_SCD,
+                       levels = c("SCD", "CON"))
 
 
 ####==========================================================
@@ -506,6 +507,12 @@ write.csv(bs,
             file = paste("/figures/",
             "oneway_baseline_ANOVA.csv"),
             quote = F, row.names = F)
+    # Obtain descriptives for significant results:
+    # RIFG_ACC and RIFG_LIFG (not Bonferroni corr)
+describeBy(total_long_t0$Z_FC[which(
+  total_long_t0$ROI_pair=="RIFG_LIFG")],
+           total_long_t0$is_SCD[which(
+             total_long_t0$ROI_pair=="RIFG_LIFG")])
 
   # T1
 bs <- total_long_t1 %>%
