@@ -475,7 +475,7 @@ bs <- total_long_fc_sn %>%
   anova_test(dv = Z_FC, wid = filename,
              between = is_SCD) %>%
   get_anova_table() %>% adjust_pvalue(
-    method = "bonferroni")
+    method = "holm")
 write.csv(bs,
           file = paste("/figures/",
                        "oneway_baseline_ANOVA_avr_fc_sn.csv"),
@@ -490,7 +490,7 @@ bs <- total_long_t0_all %>%
   anova_test(dv = Z_FC, wid = filename,
              between = is_SCD) %>%
   get_anova_table() %>% adjust_pvalue(
-    method = "bonferroni")
+    method = "holm")
 write.csv(bs,
           file = paste("/figures/",
                        "oneway_baseline_ANOVA_all.csv"),
@@ -502,17 +502,17 @@ bs <- total_long_t0 %>%
   anova_test(dv = Z_FC, wid = filename,
              between = is_SCD) %>%
   get_anova_table() %>% adjust_pvalue(
-    method = "bonferroni")
+    method = "holm")
 write.csv(bs,
             file = paste("/figures/",
             "oneway_baseline_ANOVA.csv"),
             quote = F, row.names = F)
     # Obtain descriptives for significant results:
-    # RIFG_ACC and RIFG_LIFG (not Bonferroni corr)
+    # RIFG_ACC and RIFG_LIFG (not multiple comparisons corr)
 describeBy(total_long_t0$Z_FC[which(
-  total_long_t0$ROI_pair=="RIFG_LIFG")],
+  total_long_t0$ROI_pair=="RIFG_ACC")],
            total_long_t0$is_SCD[which(
-             total_long_t0$ROI_pair=="RIFG_LIFG")])
+             total_long_t0$ROI_pair=="RIFG_ACC")])
 
   # T1
 bs <- total_long_t1 %>%
@@ -520,7 +520,7 @@ bs <- total_long_t1 %>%
   anova_test(dv = Z_FC, wid = filename,
              between = is_SCD) %>%
   get_anova_table() %>% adjust_pvalue(
-    method = "bonferroni")
+    method = "holm")
 write.csv(bs,
           file = paste("/figures/",
                        "oneway_t1_ANOVA.csv"),
@@ -532,7 +532,7 @@ bs <- total_long_t2 %>%
   anova_test(dv = Z_FC, wid = filename,
              between = is_SCD) %>%
   get_anova_table() %>% adjust_pvalue(
-    method = "bonferroni")
+    method = "holm")
 write.csv(bs,
           file = paste("/figures/",
                        "oneway_t2_ANOVA.csv"),
@@ -550,7 +550,7 @@ ws <- total_long_fc_sn %>%
   anova_test(dv = Z_FC, wid = filename,
              within = timepoint, effect.size = "pes") %>%
   get_anova_table() %>% adjust_pvalue(
-    method = "bonferroni")
+    method = "holm")
 ws
 
 ## ROIs
@@ -561,7 +561,7 @@ ws <- total_long_t0 %>%
   anova_test(dv = Z_FC, wid = filename,
              within = ROI_pair, effect.size = "pes") %>%
   get_anova_table() %>% adjust_pvalue(
-    method = "bonferroni")
+    method = "holm")
 ws  
 
   # T1
@@ -570,7 +570,7 @@ ws <- total_long_t1 %>%
   anova_test(dv = Z_FC, wid = filename,
              within = ROI_pair, effect.size = "pes") %>%
   get_anova_table() %>% adjust_pvalue(
-    method = "bonferroni")
+    method = "holm")
 ws
 
   # T2
@@ -579,7 +579,7 @@ ws <- total_long_t2 %>%
   anova_test(dv = Z_FC, wid = filename,
              within = ROI_pair, effect.size = "pes") %>%
   get_anova_table() %>% adjust_pvalue(
-    method = "bonferroni")
+    method = "holm")
 ws
 
 
@@ -592,7 +592,7 @@ ws
 pwc <- total_long_t0 %>% 
   pairwise_t_test(
     Z_FC ~ ROI_pair, pool.sd = FALSE,
-    p.adjust.method = "bonferroni"
+    p.adjust.method = "holm"
   )
 pwc[which(pwc$p.adj.signif!="ns"),]
 
@@ -600,7 +600,7 @@ pwc[which(pwc$p.adj.signif!="ns"),]
 pwc <- total_long_t1 %>% 
   pairwise_t_test(
     Z_FC ~ ROI_pair, pool.sd = FALSE,
-    p.adjust.method = "bonferroni"
+    p.adjust.method = "holm"
   )
 pwc[which(pwc$p.adj.signif!="ns"),]
 
@@ -608,7 +608,7 @@ pwc[which(pwc$p.adj.signif!="ns"),]
 pwc <- total_long_t2 %>% 
   pairwise_t_test(
     Z_FC ~ ROI_pair, pool.sd = FALSE,
-    p.adjust.method = "bonferroni"
+    p.adjust.method = "holm"
   )
 pwc[which(pwc$p.adj.signif!="ns"),]
 
