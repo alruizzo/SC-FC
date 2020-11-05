@@ -1,7 +1,10 @@
 #!/bin/bash
 
 ## A.L.R.R. September 29, 2020 / October 7, 2020
-## Script to spatially restrict each Shirer+Glasser ROI mask after visual inspection and review of the Supplementary Neuroanatomical Results of Glasser et al. (2016).
+## Script to select each multimodal ROI mask after visual inspection (for...
+## ...overlap with the anterior salience network of Shirer et al., 2012)...
+## ...and review of the Supplementary Neuroanatomical Results of Glasser...
+## ...et al. (2016).
 
 ## ROIs
   ## LIFG -> 264, 266
@@ -33,9 +36,8 @@
   area15=108
   area25=112
 
-## Define paths/directories
-INPUTFILE=/mnt/storage/Jessica_Lab/analyses/veni-lmu/masks/functional/Glasser/MNI_glasser360MNI_1mm.nii.gz
-OUTPUTFOLDER=/mnt/storage/Jessica_Lab/analyses/veni-lmu/masks/functional/rois_glasser_selected_std_1mm/
+## Get paths/directories
+source var_names.sh
 
 ## Create Output dir
 mkdir -p $OUTPUTFOLDER
@@ -43,7 +45,7 @@ mkdir -p $OUTPUTFOLDER
 ## Create ROI array to loop for
 ROIS=($roi1 $roi2 $roi3 $roi4 $roi5)
 
-## Loop to extract the appropriate areas from the Shirer+Glasser maps
+## Loop to extract the appropriate areas from the Glasser map
 for roi in ${ROIS[@]}
 do
   if [[ $roi == $roi1 ]]
@@ -115,4 +117,4 @@ do
 done
 
 echo "${ROIS[@]} finished. Check results at ----> $OUTPUTFOLDER"
-echo "* FINISHED $0 *"
+echo "* FINISHED $0 on $(date) *"
