@@ -1,3 +1,0 @@
-flirt -usesqform -in /Volumes/Jeske_Lab/analyses/veni-lmu/masks/functional/glasser360MNI.nii.gz -ref /usr/local/fsl/data/standard/MNI152_T1_1mm_brain.nii.gz -applyxfm -out /Volumes/Jeske_Lab/analyses/veni-lmu/masks/functional/MNI_glasser360MNI_1mm.nii.gz
-
-flirt -in /Volumes/Jeske_Lab/analyses/veni-lmu/masks/functional/MNI_glasser360MNI_1mm.nii.gz -ref /Volumes/Jeske_Lab/analyses/veni-lmu/masks/functional/MNI152_T1_2mm_brain.nii.gz -out /Volumes/Jeske_Lab/analyses/veni-lmu/masks/functional/MNI_glasser360MNI_2mm.nii.gz -noresampblur
