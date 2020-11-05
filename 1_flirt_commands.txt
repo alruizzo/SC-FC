@@ -1,0 +1,8 @@
+flirt -usesqform -in /Volumes/Jeske_Lab/analyses/veni-lmu/masks/functional/glasser360MNI.nii.gz -ref /usr/local/fsl/data/standard/MNI152_T1_1mm_brain.nii.gz -applyxfm -out /Volumes/Jeske_Lab/analyses/veni-lmu/masks/functional/MNI_glasser360MNI_1mm.nii.gz
+
+flirt -in /Volumes/Jeske_Lab/analyses/veni-lmu/masks/functional/MNI_glasser360MNI_1mm.nii.gz -ref /Volumes/Jeske_Lab/analyses/veni-lmu/masks/functional/MNI152_T1_2mm_brain.nii.gz -out /Volumes/Jeske_Lab/analyses/veni-lmu/masks/functional/MNI_glasser360MNI_2mm.nii.gz -noresampblur
+
+flirt -usesqform -in /Volumes/Jeske_Lab/analyses/veni-lmu/masks/functional/Shirer_et_al-posterior_salience/09-LINS/9.nii -ref /Volumes/Jeske_Lab/analyses/veni-lmu/masks/functional/MNI152_T1_2mm_brain.nii.gz -applyxfm -out /Volumes/Jeske_Lab/analyses/veni-lmu/masks/functional/Shirer_et_al-posterior_salience/09-LINS/9MNI_2mm.nii
+
+flirt -usesqform -in /Volumes/Jeske_Lab/analyses/veni-lmu/masks/functional/Shirer_et_al-posterior_salience/12-RINS/12.nii -ref /Volumes/Jeske_Lab/analyses/veni-lmu/masks/functional/MNI152_T1_2mm_brain.nii.gz -applyxfm -out /Volumes/Jeske_Lab/analyses/veni-lmu/masks/functional/Shirer_et_al-posterior_salience/12-RINS/12MNI_2mm.nii
+
