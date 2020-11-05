@@ -1,12 +1,11 @@
 #!/bin/bash
 
-## A.L.R.R. September 29, 2020 / October 7, 2020
-## Script to reslice MNI 1mm ROIs to MNI 2mm ROIs to prepare them for next reslice to native (functional) space
+# A.L.R.R. September 29, 2020 / October 7, 2020
+# Script to reslice MNI 1mm ROIs to MNI 2mm ROIs to prepare them for next...
+# ...reslice to native (functional) space
 
-## Define paths/directories
-INPUTFOLDER=/mnt/storage/Jessica_Lab/analyses/veni-lmu/masks/functional/rois_glasser_selected_std_1mm/
-OUTPUTFOLDER=/mnt/storage/Jessica_Lab/analyses/veni-lmu/masks/functional/rois_glasser_selected_std_2mm/
-STD_TEMPLATE=/mnt/storage/Jessica_Lab/analyses/veni-lmu/masks/functional/MNI152_T1_2mm_brain.nii.gz
+## Get paths/directories
+source var_names.sh
 
 ## Create Output dir if non-existent
 mkdir -p $OUTPUTFOLDER
