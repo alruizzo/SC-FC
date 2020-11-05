@@ -1,12 +1,16 @@
 #!/bin/bash
 
-## A.L.R.R. Aug 14, 2020 / September 30, 2020 / October 7, 2020
-## Script to run whole-brain (WB) dual regression (DR) for each region of interest (ROI) for each participant.
+# A.L.R.R. Aug 14, 2020 / September 30, 2020 / October 7, 2020
+# Script to run whole-brain (WB) dual regression (DR) for each region of...
+# ...interest (ROI) for each participant.
 
-SEARCHFOLDER=/mnt/storage/Jessica_Lab/analyses/veni-lmu/individual_rois/
-DATAFOLDER=/mnt/storage/Jessica_Lab/data/veni/subjects/
-FUNCFILE=/scan-data/niftis/mb_rest/edited-mb-rest.feat/ICA_AROMA/denoised_func_data_nonaggr.nii.gz
+## Get directory/file paths
+source var_names.sh
 
+## Loop to go through each participant's folder containing each ROI (in...
+## ...native space) to use it as a mask in the dual regression aimed at...
+## ...calculating the whole brain functional connectivity using that...
+## ...ROI as seed ("$mask"), from the preprocessed fMRI data ("$FUNCFILE")
 for participant in $SEARCHFOLDER*
 do
   foldername=`basename $participant`
