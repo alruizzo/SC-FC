@@ -30,7 +30,7 @@ do
       if [ ! -f ${maskname}_MNI.nii.gz ]
       then
         echo "flirt for $maskname..."
-        flirt -usesqform -in $mask/dr_stage2_ic0000.nii.gz -ref $MNIBRAIN2MM/MNI152_T1_2mm_brain.nii.gz -applyxfm -init $DATAFOLDER/${foldername}/${REGFOLDER}/example_func2standard.mat -out $mask/${maskname}_MNI
+        flirt -usesqform -in $mask/dr_stage2_ic0000.nii.gz -ref $STD_TEMPLATE -applyxfm -init $DATAFOLDER/${foldername}/${REGFOLDER}/example_func2standard.mat -out $mask/${maskname}_MNI
         echo "...done"
       fi
     fi
