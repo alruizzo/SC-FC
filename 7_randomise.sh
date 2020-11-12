@@ -1,24 +1,20 @@
 #!/bin/bash
 
-## A.L.R.R. Aug 17, 2020
-## October 8, 2020
+# A.L.R.R. Aug 17, 2020
+# October 8, 2020 (update)
 
-## Script to convert individual images to MNI space, create 4D files (all...
-## ...subject MNI converted ROI-WB FC), and run randomise on those files...
-##...to obtain group-specific (1stt) maps.
+# Script to convert individual images to MNI space, create 4D files (all...
+# ...subject MNI converted ROI-WB FC), and run randomise on those files...
+# ...to obtain group-specific (1stt) maps.
 
-  # Define paths
-SEARCHFOLDER=/mnt/storage/Jessica_Lab/analyses/veni-lmu/individual_rois/
-DATAFOLDER=/mnt/storage/Jessica_Lab/data/veni/subjects/
-REGFOLDER=/scan-data/niftis/mb_rest/edited-mb-rest.feat/reg/
-OUTPUTFOLDER=/mnt/storage/Jessica_Lab/analyses/veni-lmu/roi-wb/
-MNIBRAIN2MM=/mnt/storage/Jessica_Lab/analyses/veni-lmu/masks/functional/
+## Define paths
+source var_names.sh
 
-  # Create the output folder if it doesn't exist
+## Create the output folder if it doesn't exist
 mkdir -p $OUTPUTFOLDER
 
-  # Loop through the participants' folder to warp the native whole-brain...
-  #...images to MNI space to prepare them for randomise
+## Loop through the participants' folder to warp the native whole-brain...
+## ...images to MNI space to prepare them for randomise
 for participant in $SEARCHFOLDER*
 do
   foldername=`basename $participant`
@@ -41,10 +37,10 @@ do
   done
 done
 
-  # Merge all participant's images per ROI and time point (within the ROI)...
-  #...for randomization
+## Merge all participant's images per ROI and time point (within the ROI)...
+## ...for randomization
   echo "Now continuing with fslmerge..."
-    #LIFG ROI
+ #LIFG ROI
  mkdir -p $OUTPUTFOLDER/LIFG
  echo "...Merging LIFG across participants and time points..."
  fslmerge -t $OUTPUTFOLDER/LIFG/LIFG_01 $SEARCHFOLDER/wsu-???-00??-01/SCA_DR_01-LIFG_/01-LIFG_MNI.nii.gz
@@ -52,7 +48,7 @@ done
  fslmerge -t $OUTPUTFOLDER/LIFG/LIFG_03 $SEARCHFOLDER/wsu-???-00??-03/SCA_DR_01-LIFG_/01-LIFG_MNI.nii.gz
  echo "...done"
 
-    #LINS ROI
+ #LINS ROI
  mkdir -p $OUTPUTFOLDER/LINS
  echo "Merging LINS across participants and time points..."
  fslmerge -t $OUTPUTFOLDER/LINS/LINS_01 $SEARCHFOLDER/wsu-???-00??-01/SCA_DR_02-LINS_/02-LINS_MNI.nii.gz
@@ -60,7 +56,7 @@ done
  fslmerge -t $OUTPUTFOLDER/LINS/LINS_03 $SEARCHFOLDER/wsu-???-00??-03/SCA_DR_02-LINS_/02-LINS_MNI.nii.gz
  echo "...done"
 
-    #ACC ROI
+ #ACC ROI
  mkdir -p $OUTPUTFOLDER/ACC
  echo "Merging ACC across participants and time points..."
  fslmerge -t $OUTPUTFOLDER/ACC/ACC_01 $SEARCHFOLDER/wsu-???-00??-01/SCA_DR_03-ACC_/03-ACC_MNI.nii.gz
@@ -68,7 +64,7 @@ done
  fslmerge -t $OUTPUTFOLDER/ACC/ACC_03 $SEARCHFOLDER/wsu-???-00??-03/SCA_DR_03-ACC_/03-ACC_MNI.nii.gz
  echo "...done"
 
-    #RIFG ROI
+ #RIFG ROI
  mkdir -p $OUTPUTFOLDER/RIFG
  echo "Merging RIFG across participants and time points..."
  fslmerge -t $OUTPUTFOLDER/RIFG/RIFG_01 $SEARCHFOLDER/wsu-???-00??-01/SCA_DR_04-RIFG_/04-RIFG_MNI.nii.gz
@@ -76,7 +72,7 @@ done
  fslmerge -t $OUTPUTFOLDER/RIFG/RIFG_03 $SEARCHFOLDER/wsu-???-00??-03/SCA_DR_04-RIFG_/04-RIFG_MNI.nii.gz
  echo "...done"
 
-    #RINS ROI
+ #RINS ROI
  mkdir -p $OUTPUTFOLDER/RINS
  echo "Merging RINS across participants and time points..."
  fslmerge -t $OUTPUTFOLDER/RINS/RINS_01 $SEARCHFOLDER/wsu-???-00??-01/SCA_DR_05-RINS_/05-RINS_MNI.nii.gz
@@ -86,8 +82,8 @@ done
 
 echo "Merging of all ROIs, done"
 
- # Loop for randomise through participant folder and time point while...
- # ...using the MNI brain as mask
+## Loop for randomise through participant folder and time point while...
+## ...using the MNI brain as mask
 echo "Now starting randomise:"
 for map in $OUTPUTFOLDER*
 do
@@ -102,4 +98,5 @@ do
   done
 done
 
+## End message
 echo "* FINISHED $0 ON $(date) *"
