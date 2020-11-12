@@ -11,7 +11,7 @@ mkdir -p $OUTPUTFOLDER
 
 ## Loop to go through each participant's folder and reslice the mask files...
 ## ...to each participant's functional native space
-for folder in $SEARCHFOLDER*
+for folder in $DATAFOLDER*
 do
   foldername=`basename $folder`
   if [ -d "$folder" ] # To exclude files
