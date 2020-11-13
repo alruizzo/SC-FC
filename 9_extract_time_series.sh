@@ -21,7 +21,7 @@ do
   cd $participant
   for mask in ${participant}/*
   do
-    if [[ `basename ${mask}` == *"nii.gz" ]]
+    if [[ `basename ${mask}`==*"nii.gz" ]]
     then
       maskname=`basename $mask | sed 's/.nii.gz//'`
       echo "Now extracting time series of $maskname..."
@@ -29,7 +29,7 @@ do
       echo "...done"
     fi
   done
-  echo "...Time series extraction: done"
+  echo "...Time series extraction for $foldername: done"
 done
 
   ## End message
