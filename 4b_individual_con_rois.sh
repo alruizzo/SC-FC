@@ -20,7 +20,7 @@ do
       then
         echo "creating $foldername..."
         mkdir $OUTPUTFOLDER/$foldername
-        for mask in $MASKFOLDER*
+        for mask in $ROIFOLDER*
         do
           maskname=`basename $mask | sed 's/_std_2mm.nii.gz//'`
           echo "...flirt on $maskname..."
