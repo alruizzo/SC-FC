@@ -72,7 +72,7 @@ do
   do
     tpname=`basename $timepoint | sed 's/.nii.gz//'`
       echo "Randomising across $tpname..."
-      randomise -i $timepoint -o ${tpname}_1stt -1 -T -m $MNIBRAIN2MM/MNI152_T1_2mm_brain_mask.nii.gz
+      randomise -i $timepoint -o ${tpname}_1stt -1 -T -m $MASKFOLDER/MNI152_T1_2mm_brain_mask.nii.gz
       echo "...done"
   done
 done
