@@ -1,24 +1,22 @@
 #!/bin/bash
 
-## A.L.R.R. Aug 20, 2020
-## October 9, 2020
+# A.L.R.R. Aug 20, 2020
+# October 9, 2020
 
-## Script to select relevant information from the participants' folders...
-## ...and pass on to R for ROI-to-ROI correlation analyses
+# Script to select relevant information from the participants' folders...
+# ...and pass on to R for ROI-to-ROI correlation analyses
 
-# Script output (for errors), I run it manually in the terminal
+## Script output (for errors), I run it manually in the terminal
 #script /mnt/storage/Jessica_Lab/analyses/veni-lmu/checkfile.txt
 
-# Specify the relevant paths/directories or files
-ROOTPATH=/mnt/storage/Jessica_Lab/analyses/veni-lmu/
-SEARCHFOLDER=/mnt/storage/Jessica_Lab/analyses/veni-lmu/individual_rois/
-OUTPUTFOLDER=/mnt/storage/Jessica_Lab/analyses/veni-lmu/roi-ts/
-TEMPFOLDER=/mnt/storage/Jessica_Lab/analyses/veni-lmu/temp/
+## Specify the relevant paths/directories or files
+source var_names.sh
 
+## Create temporal and output folders
 mkdir -p $TEMPFOLDER
 mkdir -p $OUTPUTFOLDER
 
-# Loop to copy in a temporal folder the participants' files needed
+## Loop to copy in a temporal folder the participants' files needed
 for participant in $SEARCHFOLDER*
 do
     foldername=`basename $participant`
@@ -29,7 +27,7 @@ do
     echo "...done"
 done
 
-# Loop to create one text file per participant (summary)
+## Loop to create one text file per participant (summary)
 echo "Now creating one file per participant"
 for participant in $TEMPFOLDER/*
 do
@@ -46,15 +44,16 @@ do
 paste $participant/wmeants_0*.txt > $OUTPUTFOLDER/$particname.txt
 done
 
-# Compress folder to upload to R
+## Compress folder to upload to R
 echo "Now compressing the files..."
-#zip -r /mnt/storage/Jessica_Lab/analyses/veni-lmu/weightedmeantimeseries_folders.zip $TEMPFOLDER #uncomment if you want the zip file including divided into folders
+#uncomment line below if you want the zip file including divided into folders
+#zip -r /mnt/storage/Jessica_Lab/analyses/veni-lmu/weightedmeantimeseries_folders.zip $TEMPFOLDER
 zip -r $ROOTPATH/weightedmeantimeseries.zip $OUTPUTFOLDER/* #summarized in text file
 echo "...done"
 rm -r $TEMPFOLDER
 
-# End message
+## End message
 echo "* FINISHED $0 on $(date) \
 see '$OUTPUTFOLDER' to check results *"
-#exit #<-don't forger. Necessary to save the output of the 'script' command...
+#exit #<-don't forget. Necessary to save the output of the 'script' command...
 #...to the text file!
