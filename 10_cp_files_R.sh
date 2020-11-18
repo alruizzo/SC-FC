@@ -7,7 +7,7 @@
 # ...and pass on to R for ROI-to-ROI correlation analyses
 
 ## Script output (for errors), I run it manually in the terminal
-#script /mnt/storage/Jessica_Lab/analyses/veni-lmu/checkfile.txt
+#script ${ROOTPATH}/checkfile.txt
 
 ## Specify the relevant paths/directories or files
 source var_names.sh
