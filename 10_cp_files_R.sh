@@ -41,19 +41,20 @@ do
     mv ${filename}_temp.txt $file
     echo "...done"
   done
-paste $participant/wmeants_0*.txt > $OUTPUTFOLDER/$particname.txt
+paste $participant/wmeants_*.txt > $OUTPUTFOLDER/$particname.txt
 done
 
 ## Compress folder to upload to R
 echo "Now compressing the files..."
 #uncomment line below if you want the zip file including divided into folders
-#zip -r /mnt/storage/Jessica_Lab/analyses/veni-lmu/weightedmeantimeseries_folders.zip $TEMPFOLDER
-zip -r $ROOTPATH/weightedmeantimeseries.zip $OUTPUTFOLDER/* #summarized in text file
+#zip -r $ROOTPATH/weightedmeantimeseries_folders.zip $TEMPFOLDER
+#summarized in text file:
+zip -r $ROOTPATH/weightedmeantimeseries.zip $OUTPUTFOLDER/*
 echo "...done"
 rm -r $TEMPFOLDER
 
 ## End message
 echo "* FINISHED $0 on $(date) \
 see '$OUTPUTFOLDER' to check results *"
-#exit #<-don't forget. Necessary to save the output of the 'script' command...
-#...to the text file!
+#exit #<-don't forget to execute it. Necessary to save the output of the...
+#...'script' command to the text file!
