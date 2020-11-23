@@ -115,6 +115,9 @@ rm(list = c("Age", "MMSE", "part_list"))
   # Save list of to-be-excluded participants for...
   # ...the ensuing analyses
 Excluded <- exclude$participants
+write.table(exclude,
+            file = "Partic_excluded.txt",
+            quote = F, sep = "\t", row.names = F)
 
 
 ####==========================================================
