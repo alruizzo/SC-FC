@@ -41,12 +41,23 @@ levels(total$is_SCD)["MCI"] <- "MCI"
 total$is_SCD <- factor(total$is_SCD,
                        levels = c("MCI", "SCD", "CON"))
 
+  # Get information on participants to be excluded
+if (!exists('exclude')){
+  exclude <- data.frame(read.csv(
+    "Partic_excluded.txt",
+    sep = "\t"))
+}
+
+# Create character variable for next step
+Excluded <- exclude$participants
+
 
 ####==========================================================
-### PARTICIPANT SELECTION
+### PARTICIPANT SELECTION (ONE TIME STEP)
 ## Add demographic information to determine participant...
 ## ...exclusion. Note: there might be other important...
 ## ...sources of information.
+## Skip if "Excluded" exists
 
   # Get the demographics file or data frame if existent
 if (!exists('demographics_t0')){
@@ -130,7 +141,7 @@ total <- total_orig[-which(
   total_orig$filename %in% Excluded==TRUE),]
 rownames(total) <- NULL
 
-## Demographics
+## Demographics (ONE TIME STEP)
 demographics_t0 <- demographics_t0[-which(
   demographics_t0$ParticipantID %in% Excluded==TRUE),]
 rownames(demographics_t0) <- NULL
@@ -635,7 +646,7 @@ ggplot(total_long_t0_all,
             axis.text=element_text(size=12)
   ) + geom_vline(xintercept = 0.5:20,
                  color = "gray")
-ggsave("../figures/boxplot_T0_all.jpg", width = 30,
+ggsave("figures/boxplot_T0_all.jpg", width = 30,
        height = 20, units = "cm", dpi = 400)
 
 # Without MCI (SCD and CON only)
@@ -652,7 +663,7 @@ ggplot(total_long_t0,
             axis.text=element_text(size=12)
   ) + geom_vline(xintercept = 0.5:20,
                  color = "gray")
-ggsave("../figures/boxplot_T0_all.jpg", width = 30,
+ggsave("figures/boxplot_T0_all.jpg", width = 30,
        height = 20, units = "cm", dpi = 400)
 
 # T1
@@ -668,7 +679,7 @@ ggplot(total_long_t1,
             panel.grid.minor = element_blank(),
             axis.text=element_text(size=12)) + geom_vline(xintercept = 0.5:20,
                                                           color = "gray")
-ggsave("../figures/boxplot_T1.jpg", width = 30,
+ggsave("figures/boxplot_T1.jpg", width = 30,
        height = 20, units = "cm", dpi = 400)
 
 # T2
@@ -685,7 +696,7 @@ ggplot(total_long_t2,
             axis.text=element_text(size=12)
   ) + geom_vline(xintercept = 0.5:20,
                  color = "gray")
-ggsave("/cloud/project/figures/boxplot_T2.jpg", width = 30,
+ggsave("figures/boxplot_T2.jpg", width = 30,
        height = 20, units = "cm", dpi = 400)
 
 
@@ -709,7 +720,7 @@ ggplot(total_t0,
                  position = position_jitterdodge(
                    jitter.width = 0.1
                  ))
-ggsave("../figures/boxplot_avr_T0.jpg", width = 30,
+ggsave("figures/boxplot_avr_T0.jpg", width = 30,
        height = 20, units = "cm", dpi = 400)
 
 # Average FC T1
@@ -730,7 +741,7 @@ ggplot(total_t1,
                  position = position_jitterdodge(
                    jitter.width = 0.1
                  ))
-ggsave("../figures/boxplot_avr_T1.jpg", width = 30,
+ggsave("figures/boxplot_avr_T1.jpg", width = 30,
        height = 20, units = "cm", dpi = 400)
 
 # Average FC T2
@@ -751,5 +762,5 @@ ggplot(total_t2,
                  position = position_jitterdodge(
                    jitter.width = 0.1
                  ))
-ggsave("../figures/boxplot_avr_T2.jpg", width = 30,
+ggsave("figures/boxplot_avr_T2.jpg", width = 30,
        height = 20, units = "cm", dpi = 400)
