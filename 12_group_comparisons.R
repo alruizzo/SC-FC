@@ -53,82 +53,82 @@ Excluded <- exclude$participants
 
 
 ####==========================================================
-### PARTICIPANT SELECTION (ONE TIME STEP)
-## Add demographic information to determine participant...
-## ...exclusion. Note: there might be other important...
-## ...sources of information.
-## Skip if "Excluded" exists
-
-  # Get the demographics file or data frame if existent
-if (!exists('demographics_t0')){
-  demographics_t0 <- data.frame(read_excel(
-    "General/Demographics.xlsx"))
-}
-
-  # Create a participant list to extract info from the...
-  # ...demographics data frame
-part_list <- as.character(unique(total$filename))
-
-  # Make file name in demographics equal to that in total
-demographics_t0$ParticipantID <- gsub("_", "-",
-                                   demographics_t0$ParticipantID)
-
-  # Subset the demographics data frame to include only those
-  # ...for whom data are available
-demographics_t0 <- demographics_t0[
-  demographics_t0$ParticipantID %in% part_list ,]
-
-  # Identify participants to exclude according to:
-    # MMSE <= 25
-MMSE <- demographics_t0$ParticipantID[which(
-  demographics_t0$Mini.Mental.State.Examination.Total.Score....<=25
-  )]
-
-    # Age <= 50
-Age <- demographics_t0$ParticipantID[which(
-  demographics_t0$Age<=50)]
-
-  # Read the file where I wrote the exclusion info from...
-  # ...other sources (i.e., files in the lab)
-exclude <- data.frame(t(data.frame(read.csv("exclude.txt",
-                                            header = T,
-                                            sep = ""))))
-    # Add column with participants' file names
-exclude$participants <- row.names(exclude)
-exclude <- exclude[c(order(exclude$participants)),]
-row.names(exclude) <- NULL
-
-    # Rename participants' file names to match other...
-    # ...data frames (didn't find a more elegant way...
-    # ...to do it so far)
-exclude$participants <- gsub("u.", "u-",
-                             exclude$participants)
-exclude$participants <- gsub("n.", "n-",
-                             exclude$participants)
-exclude$participants <- gsub("i.", "i-",
-                             exclude$participants)
-
-    # Organize this data frame
-colnames(exclude)[1] <- "reason"
-exclude <- exclude[, c("participants", "reason")]
-
-  # Add information extracted from the Demographics...
-  # ...file
-exclude$demographics_t0 <- ""
-exclude$demographics_t0[exclude$participants %in% Age] <-
-  "Age"
-exclude$demographics_t0[exclude$participants %in% MMSE] <-
-  "MMSE"
-
-  # Clean work space
-rm(list = c("Age", "MMSE", "part_list"))
-
-  # Save list of to-be-excluded participants for...
-  # ...the ensuing analyses
-Excluded <- exclude$participants
-write.table(exclude,
-            file = "Partic_excluded.txt",
-            quote = F, sep = "\t", row.names = F)
+# ### PARTICIPANT SELECTION (ONE TIME STEP), hence commented
+# ## Add demographic information to determine participant...
+# ## ...exclusion. Note: there might be other important...
+# ## ...sources of information.
+# ## Skip if "Excluded" exists
+# 
+#   # Get the demographics file or data frame if existent
+# if (!exists('demographics_t0')){
+#   demographics_t0 <- data.frame(read_excel(
+#     "General/Demographics.xlsx"))
+# }
+# 
+#   # Create a participant list to extract info from the...
+#   # ...demographics data frame
+# part_list <- as.character(unique(total$filename))
+# 
+#   # Make file name in demographics equal to that in total
+# demographics_t0$ParticipantID <- gsub("_", "-",
+#                                    demographics_t0$ParticipantID)
+# 
+#   # Subset the demographics data frame to include only those
+#   # ...for whom data are available
+# demographics_t0 <- demographics_t0[
+#   demographics_t0$ParticipantID %in% part_list ,]
+# 
+#   # Identify participants to exclude according to:
+#     # MMSE <= 25
+# MMSE <- demographics_t0$ParticipantID[which(
+#   demographics_t0$Mini.Mental.State.Examination.Total.Score....<=25
+#   )]
+# 
+#     # Age <= 50
+# Age <- demographics_t0$ParticipantID[which(
+#   demographics_t0$Age<=50)]
+# 
+#   # Read the file where I wrote the exclusion info from...
+#   # ...other sources (i.e., files in the lab)
+# exclude <- data.frame(t(data.frame(read.csv("exclude.txt",
+#                                             header = T,
+#                                             sep = ""))))
+#     # Add column with participants' file names
+# exclude$participants <- row.names(exclude)
+# exclude <- exclude[c(order(exclude$participants)),]
+# row.names(exclude) <- NULL
+# 
+#     # Rename participants' file names to match other...
+#     # ...data frames (didn't find a more elegant way...
+#     # ...to do it so far)
+# exclude$participants <- gsub("u.", "u-",
+#                              exclude$participants)
+# exclude$participants <- gsub("n.", "n-",
+#                              exclude$participants)
+# exclude$participants <- gsub("i.", "i-",
+#                              exclude$participants)
+# 
+#     # Organize this data frame
+# colnames(exclude)[1] <- "reason"
+# exclude <- exclude[, c("participants", "reason")]
+# 
+#   # Add information extracted from the Demographics...
+#   # ...file
+# exclude$demographics_t0 <- ""
+# exclude$demographics_t0[exclude$participants %in% Age] <-
+#   "Age"
+# exclude$demographics_t0[exclude$participants %in% MMSE] <-
+#   "MMSE"
+# 
+#   # Clean work space
+# rm(list = c("Age", "MMSE", "part_list"))
+# 
+#   # Save list of to-be-excluded participants for...
+#   # ...the ensuing analyses
+# Excluded <- exclude$participants
+# write.table(exclude,
+#             file = "Partic_excluded.txt",
+#             quote = F, sep = "\t", row.names = F)
 
 
 ####==========================================================
@@ -141,10 +141,10 @@ total <- total_orig[-which(
   total_orig$filename %in% Excluded==TRUE),]
 rownames(total) <- NULL
 
-## Demographics (ONE TIME STEP)
-demographics_t0 <- demographics_t0[-which(
-  demographics_t0$ParticipantID %in% Excluded==TRUE),]
-rownames(demographics_t0) <- NULL
+# ## Demographics (ONE TIME STEP) hence, commented
+# demographics_t0 <- demographics_t0[-which(
+#   demographics_t0$ParticipantID %in% Excluded==TRUE),]
+# rownames(demographics_t0) <- NULL
 
 ## Adjust total to excluding MCI
 total_MCI <- total_orig[-which(
@@ -155,6 +155,7 @@ levels(total$is_SCD)["SCD"] <- "SCD"
 levels(total$is_SCD)["CON"] <- "CON"
 total$is_SCD <- factor(total$is_SCD,
                        levels = c("SCD", "CON"))
+total$filename <- factor(total$filename)
 
 
 ####==========================================================
@@ -207,11 +208,11 @@ total_t1 <- total_t1[, -which(
 total_t2 <- total_t2[, -which(
   colnames(total_t2)=="timepoint")]
 
-## Set "filename" column to having the same name across...
-# ...data frames
-total_t0$filename <- substr(total_t0$filename, 1, 12)
-total_t1$filename <- substr(total_t1$filename, 1, 12)
-total_t2$filename <- substr(total_t2$filename, 1, 12)
+# ## Set "filename" column to having the same name across...
+# # ...data frames (ONE TIME STEP), hence, commented
+# total_t0$filename <- substr(total_t0$filename, 1, 12)
+# total_t1$filename <- substr(total_t1$filename, 1, 12)
+# total_t2$filename <- substr(total_t2$filename, 1, 12)
 
 
 ####==========================================================
@@ -764,3 +765,54 @@ ggplot(total_t2,
                  ))
 ggsave("figures/boxplot_avr_T2.jpg", width = 30,
        height = 20, units = "cm", dpi = 400)
+
+
+####==========================================================
+### PARTICIPANT COUNT
+## Characterization for each time point
+
+# Create a data frame of participants who had both follow-ups
+followup <- data.frame(total_t1$filename[which(
+  total_t1$filename %in% total_t2$filename==TRUE)])
+colnames(followup)[1] <- "filename"
+
+# Create a data frame from baseline participants who had...
+# ...a full follow-up.
+all <- data.frame(total_t0$filename[which(
+  total_t0$filename %in% followup$filename==TRUE)])
+colnames(all)[1] <- "filename"
+
+# Create a data frame from baseline participants who had...
+# ...the first follow-up *only*.
+tp01 <- data.frame(total_t0$filename[which(
+  total_t0$filename %in% total_t1$filename==TRUE &
+    total_t0$filename %in% followup$filename==FALSE)])
+colnames(tp01)[1] <- "filename"
+
+# Create a data frame from baseline participants who had...
+# ...the second follow-up *only*.
+tp02 <- data.frame(total_t0$filename[which(
+  total_t0$filename %in% total_t2$filename==TRUE &
+    total_t0$filename %in% followup$filename==FALSE)])
+colnames(tp02)[1] <- "filename"
+
+# Create a data frame from t1 participants who had...
+# ...the second follow-up *only*.
+tp12 <- data.frame(total_t1$filename[which(
+  total_t1$filename %in% total_t2$filename==TRUE &
+    total_t1$filename %in% followup$filename==FALSE)])
+colnames(tp12)[1] <- "filename"
+
+# Create a data frame from baseline participants who had...
+# ...no follow-up.
+baseline <- data.frame(total_t0$filename[which(
+  total_t0$filename %in% all$filename==FALSE &
+    total_t0$filename %in% tp01$filename==FALSE &
+    total_t0$filename %in% tp02$filename==FALSE &
+    total_t0$filename %in% tp12$filename==FALSE)])
+colnames(baseline)[1] <- "filename"
+
+# Delete the "followup" data frame, to avoid getting...
+# ...confused
+rm(followup)
+
