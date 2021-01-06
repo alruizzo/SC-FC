@@ -48,15 +48,44 @@ if (!exists('exclude')){
     sep = "\t"))
 }
 
-# Create character variable for next step
-Excluded <- exclude$participants
+  # Revised reasons for exclusion after discussion with...
+  # ...other members of the lab
+    # Create column
+exclude$revise <- "exclude"
+    # Specific reasons after inquiring
+exclude$revise[which(exclude$participants=="wsu-con-0004")] <-
+  "included in similar project"
+exclude$revise[which(exclude$participants=="wsu-con-0024")] <-
+  "no obvious effect on rs-fMRI"
+exclude$revise[which(exclude$participants=="wsu-con-0025")] <-
+  "scored normal in other projects"
+exclude$revise[which(exclude$participants=="wsu-con-0030")] <-
+  "normal MMSE T1 and T2"
+exclude$revise[which(exclude$participants=="wsu-con-0033")] <-
+  "no obvious motion in rs-fMRI"
+exclude$revise[which(exclude$participants=="wsu-con-0035")] <-
+  "scored normal in other projects"
+exclude$revise[which(exclude$participants=="wsu-sci-0012")] <-
+  "scored normal in other projects"
+exclude$revise[which(exclude$participants=="wsu-sci-0015")] <-
+  "~75% out of system for fMRI"
+exclude$revise[which(exclude$participants=="wsu-sci-0017")] <-
+  "Not good enough reason for exclusion"
+exclude$revise[which(exclude$participants=="wsu-sci-0019")] <-
+  "scored normal in other projects"
+exclude$revise[which(exclude$participants=="wsu-sci-0022")] <-
+  "overall normal"
+
+  # Create character variable for next step
+Excluded <- exclude$participants[which(exclude$revise=="exclude")]
 
 
 ####==========================================================
 # ### PARTICIPANT SELECTION (ONE TIME STEP), hence commented
 # ## Add demographic information to determine participant...
 # ## ...exclusion. Note: there might be other important...
-# ## ...sources of information.
+# ## ...sources of information, so this information needs...
+# ## ...to be first checked with other folks in the lab.
 # ## Skip if "Excluded" exists
 # 
 #   # Get the demographics file or data frame if existent
@@ -66,7 +95,7 @@ Excluded <- exclude$participants
 # }
 # 
 #   # Create a participant list to extract info from the...
-#   # ...demographics data frame
+#   # ...demographics data frame (at baseline!)
 # part_list <- as.character(unique(total$filename))
 # 
 #   # Make file name in demographics equal to that in total
@@ -78,7 +107,7 @@ Excluded <- exclude$participants
 # demographics_t0 <- demographics_t0[
 #   demographics_t0$ParticipantID %in% part_list ,]
 # 
-#   # Identify participants to exclude according to:
+#   # Identify possible participants to exclude according to:
 #     # MMSE <= 25
 # MMSE <- demographics_t0$ParticipantID[which(
 #   demographics_t0$Mini.Mental.State.Examination.Total.Score....<=25
@@ -123,12 +152,19 @@ Excluded <- exclude$participants
 #   # Clean work space
 # rm(list = c("Age", "MMSE", "part_list"))
 # 
-#   # Save list of to-be-excluded participants for...
-#   # ...the ensuing analyses
+#   # Save list of possibly to-be-excluded participants...
+#   # ...for the ensuing analyses
 # Excluded <- exclude$participants
 # write.table(exclude,
 #             file = "Partic_excluded.txt",
 #             quote = F, sep = "\t", row.names = F)
+
+
+####==========================================================
+### ROI-PAIR SELECTION
+## Leave in the columns corresponding to the ROI-pairs of...
+## ...interest
+
 
 
 ####==========================================================
