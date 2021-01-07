@@ -163,8 +163,22 @@ Excluded <- exclude$participants[which(exclude$revise=="exclude")]
 ####==========================================================
 ### ROI-PAIR SELECTION
 ## Leave in the columns corresponding to the ROI-pairs of...
-## ...interest
+## ...interest (all involving the ACC): ACC-LIFG; ACC-RIFG;...
+## ... ACC-LINS; ACC-RINS.
 
+# Save copy of all ROI pairs
+total_allrois <- total
+
+# Get only the ROI-pairs of interest
+total <- total[, c(1, 2, 3, grep("ACC", colnames(total)))]
+
+# Obtain average FC for these pairs
+total$SN_FC <- rowMeans(subset(total,
+                               select = c(ACC_LIFG,
+                                          ACC_LINS,
+                                          RIFG_ACC,
+                                          RINS_ACC)),
+                        na.rm = TRUE)
 
 
 ####==========================================================
@@ -220,16 +234,16 @@ total_t2 <- total[which(total$timepoint==3),]
 
 ## Adjust column names for each time point file
   # T0
-colnames(total_t0)[4:14] <- paste(
-  colnames(total_t0)[4:14], 1, sep = "_")
+colnames(total_t0)[-c(1,2,3)] <- paste(
+  colnames(total_t0)[-c(1,2,3)], 1, sep = "_")
 
   # T1
-colnames(total_t1)[4:14] <- paste(
-  colnames(total_t1)[4:14], 2, sep = "_")
+colnames(total_t1)[-c(1,2,3)] <- paste(
+  colnames(total_t1)[-c(1,2,3)], 2, sep = "_")
 
   # T2
-colnames(total_t2)[4:14] <- paste(
-  colnames(total_t2)[4:14], 3, sep = "_")
+colnames(total_t2)[-c(1,2,3)] <- paste(
+  colnames(total_t2)[-c(1,2,3)], 3, sep = "_")
 
 ## Delete "timepoint" column (column 3)
   # T0
@@ -304,7 +318,7 @@ rm(temp)
 total_all_long <- pivot_longer(
   total_wide,
   names_to = "ROI_pair",
-  cols = LINS_LIFG_1:RINS_RIFG_3,
+  cols = ACC_LIFG_1:RINS_ACC_3,
   values_to = "Z_FC")
 
   # Make some adjustments to the new data frame
@@ -376,7 +390,7 @@ get_anova_table(res.aov.total_long_fc_sn, correction = "auto")
 ## Transform data frame for mixed model
 # Total with all time points
 total_long <- pivot_longer(total_MCI, names_to = "ROI_pair",
-                           cols = LINS_LIFG:RINS_RIFG,
+                           cols = ACC_LIFG:RINS_ACC,
                            values_to = "Z_FC")
 total_long <- data.frame(total_long)
 total_long$filename <- factor(
@@ -535,13 +549,16 @@ write.csv(bs,
 ## ROIs
 # Within each WS condition, comparing between subjects (BS)
   # Baseline (T0)
-    #All
+    # All (including MCI)
 bs <- total_long_t0_all %>%
   group_by(ROI_pair) %>%
   anova_test(dv = Z_FC, wid = filename,
              between = is_SCD) %>%
   get_anova_table() %>% adjust_pvalue(
     method = "holm")
+      # See result
+bs
+      # Save result
 write.csv(bs,
           file = paste("/figures/",
                        "oneway_baseline_ANOVA_all.csv"),
@@ -554,16 +571,13 @@ bs <- total_long_t0 %>%
              between = is_SCD) %>%
   get_anova_table() %>% adjust_pvalue(
     method = "holm")
+      # See result
+bs
+      # Save result
 write.csv(bs,
             file = paste("/figures/",
             "oneway_baseline_ANOVA.csv"),
             quote = F, row.names = F)
-    # Obtain descriptives for significant results:
-    # RIFG_ACC and RIFG_LIFG (not multiple comparisons corr)
-describeBy(total_long_t0$Z_FC[which(
-  total_long_t0$ROI_pair=="RIFG_ACC")],
-           total_long_t0$is_SCD[which(
-             total_long_t0$ROI_pair=="RIFG_ACC")])
 
   # T1
 bs <- total_long_t1 %>%
@@ -572,6 +586,9 @@ bs <- total_long_t1 %>%
              between = is_SCD) %>%
   get_anova_table() %>% adjust_pvalue(
     method = "holm")
+    # See result
+bs
+    # Save result
 write.csv(bs,
           file = paste("/figures/",
                        "oneway_t1_ANOVA.csv"),
@@ -584,6 +601,15 @@ bs <- total_long_t2 %>%
              between = is_SCD) %>%
   get_anova_table() %>% adjust_pvalue(
     method = "holm")
+    # See result
+bs
+    # Obtain descriptives for significant results:
+    # ACC_LIFG and ACC_LINS
+describeBy(total_long_t2$Z_FC[which(
+  total_long_t2$ROI_pair=="ACC_LINS")],
+  total_long_t2$is_SCD[which(
+    total_long_t2$ROI_pair=="ACC_LINS")])
+  # Save result
 write.csv(bs,
           file = paste("/figures/",
                        "oneway_t2_ANOVA.csv"),
@@ -671,7 +697,8 @@ pwc[which(pwc$p.adj.signif!="ns"),]
 # Baseline (T0)
 # All
 ggplot(total_long_t0_all,
-       aes(x=reorder(ROI_pair, Z_FC, FUN = median), y=Z_FC,
+       aes(x=reorder(ROI_pair, Z_FC, FUN = median),
+           y=Z_FC,
            fill=is_SCD)) + 
   geom_boxplot() + scale_fill_manual(values=c(
     "slateblue1", "tomato", "yellow")
@@ -688,51 +715,108 @@ ggsave("figures/boxplot_T0_all.jpg", width = 30,
 
 # Without MCI (SCD and CON only)
 ggplot(total_long_t0,
-       aes(x=reorder(ROI_pair, Z_FC, FUN = median), y=Z_FC,
+       aes(x=reorder(ROI_pair, Z_FC, FUN = median),
+           y=Z_FC,
            fill=is_SCD)) + 
-  geom_boxplot() + scale_fill_manual(values=c(
-    "tomato", "yellow")
+  geom_boxplot(outlier.shape = NA
+               ) + scale_fill_manual(values=c(
+                 #"#ef8a62", "#67a9cf") ---> DECIDE
+                 "#998ec3", "#f1a340")
+  ) + ggtitle("T0"
   ) + xlab("ROI pairs") + ylab(
     "Functional connectivity (Z)"
-  ) + theme_bw() + ylim(-1, 3
+  ) + labs(fill = "Group") + theme_bw() + ylim(-0.5, 2.5
+  ) + scale_x_discrete(labels=c("RINS_ACC" = "ACC-RINS",
+                                "ACC_LINS" = "ACC-LINS",
+                                "RIFG_ACC" = "ACC-RMFG",
+                                "ACC_LIFG" = "ACC-LMFG")
   ) + theme(panel.grid.major = element_blank(),
             panel.grid.minor = element_blank(),
-            axis.text=element_text(size=12)
-  ) + geom_vline(xintercept = 0.5:20,
-                 color = "gray")
+            axis.text=element_text(size=12),
+            plot.title = element_text(
+              hjust = 0.5,
+              face = "bold")
+            ) + geom_vline(xintercept = 1.5:3.5,
+                 color = "gray") + stat_compare_means(
+                   label = "p.signif",
+                   label.y = 1.7, method = "anova",
+                   hide.ns = T
+                 ) + geom_point(aes(fill = is_SCD),
+                                size = 2, color = "black",
+                                shape = 21, alpha = 0.8,
+                                position = position_jitterdodge(
+                                  jitter.width = 0.3))
 ggsave("figures/boxplot_T0_all.jpg", width = 30,
        height = 20, units = "cm", dpi = 400)
 
 # T1
 ggplot(total_long_t1,
-       aes(x=reorder(ROI_pair, Z_FC, FUN = median), y=Z_FC,
+       aes(x=reorder(ROI_pair, Z_FC, FUN = median),
+           y=Z_FC,
            fill=is_SCD)) + 
-  geom_boxplot() + scale_fill_manual(values=c(
+  geom_boxplot(outlier.shape = NA
+               ) + scale_fill_manual(values=c(
     "tomato", "yellow")
+  ) + ggtitle("T1"
   ) + xlab("ROI pairs") + ylab(
     "Functional connectivity (Z)"
-  ) + theme_bw() + ylim(-1, 3
+  ) + labs(fill = "Group") + theme_bw() + ylim(-0.5, 2.5
+  ) + scale_x_discrete(labels=c("RINS_ACC" = "ACC-RINS",
+                                "ACC_LINS" = "ACC-LINS",
+                                "RIFG_ACC" = "ACC-RMFG",
+                                "ACC_LIFG" = "ACC-LMFG")
   ) + theme(panel.grid.major = element_blank(),
             panel.grid.minor = element_blank(),
-            axis.text=element_text(size=12)) + geom_vline(xintercept = 0.5:20,
-                                                          color = "gray")
+            axis.text=element_text(size=12),
+            plot.title = element_text(
+              hjust = 0.5,
+              face = "bold")
+            ) + geom_vline(
+              xintercept = 1.5:3.5,
+              color = "gray") + stat_compare_means(
+                label = "p.signif",
+                label.y = 1.7, method = "anova",
+                hide.ns = T
+              ) + geom_point(aes(fill = is_SCD),
+                             size = 2, color = "black",
+                             shape = 21, alpha = 0.8,
+                             position = position_jitterdodge(
+                               jitter.width = 0.3))
 ggsave("figures/boxplot_T1.jpg", width = 30,
        height = 20, units = "cm", dpi = 400)
 
 # T2
 ggplot(total_long_t2,
-       aes(x=reorder(ROI_pair, Z_FC, FUN = median), y=Z_FC,
+       aes(x=reorder(ROI_pair, Z_FC, FUN = median),
+           y=Z_FC,
            fill=is_SCD)) + 
-  geom_boxplot() + scale_fill_manual(values=c(
+  geom_boxplot(outlier.shape = NA
+               ) + scale_fill_manual(values=c(
     "tomato", "yellow")
   ) + xlab("ROI pairs") + ylab(
     "Functional connectivity (Z)"
-  ) + theme_bw() + ylim(-1, 3
+  ) + ggtitle("T2"
+  ) + labs(fill = "Group") + theme_bw() + ylim(-0.5, 2.5
+  ) + scale_x_discrete(labels=c("RINS_ACC" = "ACC-RINS",
+                                "ACC_LINS" = "ACC-LINS",
+                                "RIFG_ACC" = "ACC-RMFG",
+                                "ACC_LIFG" = "ACC-LMFG")
   ) + theme(panel.grid.major = element_blank(),
             panel.grid.minor = element_blank(),
-            axis.text=element_text(size=12)
-  ) + geom_vline(xintercept = 0.5:20,
-                 color = "gray")
+            axis.text=element_text(size=12),
+            plot.title = element_text(hjust = 0.5,
+                                      face = "bold")
+  ) + geom_vline(xintercept = 1.5:3.5,
+                 color = "gray", #ADJUST LINETYPE
+                 linetype = "longdash") + stat_compare_means(
+                   label = "p.signif",
+                   label.y = 1.7, method = "anova",
+                   hide.ns = T
+                   ) + geom_point(aes(fill = is_SCD),
+                                size = 2, color = "black",
+                                shape = 21, alpha = 0.6,
+                                position = position_jitterdodge(
+                                  jitter.width = 0.3))
 ggsave("figures/boxplot_T2.jpg", width = 30,
        height = 20, units = "cm", dpi = 400)
 
@@ -743,20 +827,21 @@ ggsave("figures/boxplot_T2.jpg", width = 30,
 ggplot(total_t0,
        aes(x=is_SCD, y=SN_FC_1,
            fill=is_SCD)) +
-  #) + geom_violin(scale="count",
-  #color = "gray") +
-  geom_boxplot(#width = 0.5/length(unique(total_t1$is_SCD))
-  ) + scale_fill_manual(values=c(
+  geom_boxplot(outlier.shape = NA, width = 0.4,
+  notch = F) + scale_fill_manual(values=c(
     "tomato", "yellow")
+  ) + ggtitle("T0"
   ) + ylab("Average Functional Connectivity (Z)"
-  ) + theme_bw() + ylim(0, 1.5
+  ) + labs(fill = "Group") + theme_bw() + ylim(0, 1.5
   ) + theme(axis.text=element_text(size=12),
-            axis.title.x=element_blank()
-  ) + geom_point(aes(fill = is_SCD), size = 2,
-                 shape = 23, alpha = 0.5,
+            axis.title.x=element_blank(),
+            plot.title = element_text(hjust = 0.5,
+                                      face = "bold")
+            ) + geom_point(aes(fill = is_SCD),
+                 size = 4, color = "black",
+                 shape = 21, alpha = 0.8,
                  position = position_jitterdodge(
-                   jitter.width = 0.1
-                 ))
+                   jitter.width = 0.3))
 ggsave("figures/boxplot_avr_T0.jpg", width = 30,
        height = 20, units = "cm", dpi = 400)
 
@@ -764,19 +849,21 @@ ggsave("figures/boxplot_avr_T0.jpg", width = 30,
 ggplot(total_t1,
        aes(x=is_SCD, y=SN_FC_2,
            fill=is_SCD)) +
-  #) + geom_violin(scale="count",
-  #color = "gray") +
   geom_boxplot(#width = 0.5/length(unique(total_t1$is_SCD))
-  ) + scale_fill_manual(values=c(
+    outlier.shape = NA, width = 0.4,
+    notch = F) + scale_fill_manual(values=c(
     "tomato", "yellow")
+  ) + ggtitle("T1"
   ) + ylab("Average Functional Connectivity (Z)"
-  ) + theme_bw() + ylim(0, 1.5
+  ) + theme_bw() + labs(fill = "Group") + ylim(0, 1.5
   ) + theme(axis.text=element_text(size=12),
-            axis.title.x=element_blank()
-  ) + geom_point(aes(fill = is_SCD), size = 2,
-                 shape = 23, alpha = 0.5,
+            axis.title.x=element_blank(),
+            plot.title = element_text(hjust = 0.5,
+                                      face = "bold")
+  ) + geom_point(aes(fill = is_SCD), size = 4,
+                 shape = 21, alpha = 0.8,
                  position = position_jitterdodge(
-                   jitter.width = 0.1
+                   jitter.width = 0.3
                  ))
 ggsave("figures/boxplot_avr_T1.jpg", width = 30,
        height = 20, units = "cm", dpi = 400)
@@ -785,20 +872,26 @@ ggsave("figures/boxplot_avr_T1.jpg", width = 30,
 ggplot(total_t2,
        aes(x=is_SCD, y=SN_FC_3,
            fill=is_SCD)) +
-  #) + geom_violin(scale="count",
-  #color = "gray") +
   geom_boxplot(#width = 0.5/length(unique(total_t1$is_SCD))
-  ) + scale_fill_manual(values=c(
+    outlier.shape = NA, width = 0.4,
+    notch = F) + scale_fill_manual(values=c(
     "tomato", "yellow")
+  ) + ggtitle("T2"
   ) + ylab("Average Functional Connectivity (Z)"
-  ) + theme_bw() + ylim(0, 1.5
+  ) + theme_bw() + labs(fill = "Group") + ylim(0, 1.5
   ) + theme(axis.text=element_text(size=12),
-            axis.title.x=element_blank()
-  ) + geom_point(aes(fill = is_SCD), size = 2,
-                 shape = 23, alpha = 0.5,
+            axis.title.x=element_blank(),
+            plot.title = element_text(hjust = 0.5,
+                                      face = "bold")
+  ) + geom_point(aes(fill = is_SCD), size = 4,
+                 shape = 21, alpha = 0.8,
                  position = position_jitterdodge(
-                   jitter.width = 0.1
-                 ))
+                   jitter.width = 0.3
+                 )) + stat_compare_means(
+                   label = "p.format",
+                   comparisons = list(c("SCD",
+                                        "CON"))
+                 )
 ggsave("figures/boxplot_avr_T2.jpg", width = 30,
        height = 20, units = "cm", dpi = 400)
 
@@ -851,4 +944,3 @@ colnames(baseline)[1] <- "filename"
 # Delete the "followup" data frame, to avoid getting...
 # ...confused
 rm(followup)
-
