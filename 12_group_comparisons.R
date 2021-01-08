@@ -173,12 +173,33 @@ total_allrois <- total
 total <- total[, c(1, 2, 3, grep("ACC", colnames(total)))]
 
 # Obtain average FC for these pairs
-total$SN_FC <- rowMeans(subset(total,
+total$SN_FC <- round(rowMeans(subset(total,
                                select = c(ACC_LIFG,
                                           ACC_LINS,
                                           RIFG_ACC,
                                           RINS_ACC)),
-                        na.rm = TRUE)
+                        na.rm = TRUE), 2)
+
+# Control ROIs
+if (!exists('totalcon')){
+  totalcon <- read.csv("CON-ROI-FC-all.csv",
+                    header = T, row.names = 1)
+}
+
+# Check if the two data frames have equal rows and...
+# ...leave only the control ROI-pairs of interest...
+# ...i.e., those involving the posterior insula and...
+# ...the ACC:
+if (is_empty(which(
+  substr(totalcon$filename, 1, 12)!=total$filename))){
+  totalcon <- totalcon[, grep("ACC", colnames(totalcon))]
+}
+
+# Add the control pairs to the total data frame:
+total <- cbind(total, totalcon)
+
+# Adjust total columns to have SN-FC at the end
+total <- total[, c(1:7, 9:10, 8)]
 
 
 ####==========================================================
@@ -318,7 +339,7 @@ rm(temp)
 total_all_long <- pivot_longer(
   total_wide,
   names_to = "ROI_pair",
-  cols = ACC_LIFG_1:RINS_ACC_3,
+  cols = ACC_LIFG_1:RPIN_ACC_3,
   values_to = "Z_FC")
 
   # Make some adjustments to the new data frame
@@ -390,7 +411,7 @@ get_anova_table(res.aov.total_long_fc_sn, correction = "auto")
 ## Transform data frame for mixed model
 # Total with all time points
 total_long <- pivot_longer(total_MCI, names_to = "ROI_pair",
-                           cols = ACC_LIFG:RINS_ACC,
+                           cols = ACC_LIFG:RPIN_ACC,
                            values_to = "Z_FC")
 total_long <- data.frame(total_long)
 total_long$filename <- factor(
@@ -405,13 +426,22 @@ total_long_t0_all <- data.frame(total_long[which(
 total_long_t0_all$filename <- factor(
   total_long_t0_all$filename)
 total_long_t0_all$ROI_pair <- factor(
-  total_long_t0_all$ROI_pair)
+  total_long_t0_all$ROI_pair,
+  levels = c("ACC_LIFG", "RIFG_ACC",
+             "ACC_LINS", "RINS_ACC",
+             "LPIN_ACC", "RPIN_ACC"))
 
   # Only SCD and CON
 total_long_t0 <- total_long[which(total_long$timepoint==1 &
                                     total_long$is_SCD!="MCI"), ]
 total_long_t0$is_SCD <- factor(total_long_t0$is_SCD,
                                levels = c("SCD", "CON"))
+rownames(total_long_t0) <- NULL
+total_long_t0$ROI_pair <- factor(
+  total_long_t0$ROI_pair,
+  levels = c("ACC_LIFG", "RIFG_ACC",
+             "ACC_LINS", "RINS_ACC",
+             "LPIN_ACC", "RPIN_ACC"))
 
 # T1
 total_long_t1 <- data.frame(total_long[which(
@@ -422,7 +452,11 @@ total_long_t1$is_SCD <- factor(
 total_long_t1$filename <- factor(
   total_long_t1$filename)
 total_long_t1$ROI_pair <- factor(
-  total_long_t1$ROI_pair)
+  total_long_t1$ROI_pair,
+  levels = c("ACC_LIFG", "RIFG_ACC",
+             "ACC_LINS", "RINS_ACC",
+             "LPIN_ACC", "RPIN_ACC"))
+rownames(total_long_t1) <- NULL
 
 # T2
 total_long_t2 <- data.frame(total_long[which(
@@ -433,7 +467,11 @@ total_long_t2$is_SCD <- factor(
 total_long_t2$filename <- factor(
   total_long_t2$filename)
 total_long_t2$ROI_pair <- factor(
-  total_long_t2$ROI_pair)
+  total_long_t2$ROI_pair,
+  levels = c("ACC_LIFG", "RIFG_ACC",
+             "ACC_LINS", "RINS_ACC",
+             "LPIN_ACC", "RPIN_ACC"))
+rownames(total_long_t2) <- NULL
 
 
 ####==========================================================
@@ -665,8 +703,32 @@ ws
 ## Pairwise t-tests to obtain greater detail into the...
 ## ...differences
 
-  # Baseline (T0)
+  # Across time points
+pwc <- total_all_long %>% 
+  pairwise_t_test(
+    Z_FC ~ ROI_pair, pool.sd = FALSE,
+    p.adjust.method = "holm"
+  )
+pwc[which(pwc$p.adj.signif!="ns"),]
+
+  # Baseline (T0) -> SCD x ROIpair interaction
 pwc <- total_long_t0 %>% 
+  pairwise_t_test(
+    Z_FC ~ ROI_pair, pool.sd = FALSE,
+    p.adjust.method = "holm"
+  )
+pwc[which(pwc$p.adj.signif!="ns"),]
+    # CON
+pwc <- total_long_t0[which(
+  total_long_t0$is_SCD=="CON"),] %>% 
+  pairwise_t_test(
+    Z_FC ~ ROI_pair, pool.sd = FALSE,
+    p.adjust.method = "holm"
+  )
+pwc[which(pwc$p.adj.signif!="ns"),]
+    # SCD
+pwc <- total_long_t0[which(
+  total_long_t0$is_SCD=="SCD"),] %>% 
   pairwise_t_test(
     Z_FC ~ ROI_pair, pool.sd = FALSE,
     p.adjust.method = "holm"
@@ -682,6 +744,7 @@ pwc <- total_long_t1 %>%
 pwc[which(pwc$p.adj.signif!="ns"),]
 
   # T2
+    # All
 pwc <- total_long_t2 %>% 
   pairwise_t_test(
     Z_FC ~ ROI_pair, pool.sd = FALSE,
@@ -695,204 +758,189 @@ pwc[which(pwc$p.adj.signif!="ns"),]
 ## Box plots of ROI-to-ROI FC per SCD group per time point
 
 # Baseline (T0)
-# All
-ggplot(total_long_t0_all,
-       aes(x=reorder(ROI_pair, Z_FC, FUN = median),
-           y=Z_FC,
-           fill=is_SCD)) + 
-  geom_boxplot() + scale_fill_manual(values=c(
-    "slateblue1", "tomato", "yellow")
-  ) + xlab("ROI pairs") + ylab(
-    "Functional connectivity (Z)"
-  ) + theme_bw() + ylim(-1, 3
-  ) + theme(panel.grid.major = element_blank(),
-            panel.grid.minor = element_blank(),
-            axis.text=element_text(size=12)
-  ) + geom_vline(xintercept = 0.5:20,
-                 color = "gray")
-ggsave("figures/boxplot_T0_all.jpg", width = 30,
-       height = 20, units = "cm", dpi = 400)
-
-# Without MCI (SCD and CON only)
+# SCD and CON only
 ggplot(total_long_t0,
-       aes(x=reorder(ROI_pair, Z_FC, FUN = median),
-           y=Z_FC,
-           fill=is_SCD)) + 
-  geom_boxplot(outlier.shape = NA
-               ) + scale_fill_manual(values=c(
-                 #"#ef8a62", "#67a9cf") ---> DECIDE
-                 "#998ec3", "#f1a340")
-  ) + ggtitle("T0"
-  ) + xlab("ROI pairs") + ylab(
-    "Functional connectivity (Z)"
-  ) + labs(fill = "Group") + theme_bw() + ylim(-0.5, 2.5
-  ) + scale_x_discrete(labels=c("RINS_ACC" = "ACC-RINS",
-                                "ACC_LINS" = "ACC-LINS",
-                                "RIFG_ACC" = "ACC-RMFG",
-                                "ACC_LIFG" = "ACC-LMFG")
-  ) + theme(panel.grid.major = element_blank(),
-            panel.grid.minor = element_blank(),
-            axis.text=element_text(size=12),
-            plot.title = element_text(
-              hjust = 0.5,
-              face = "bold")
-            ) + geom_vline(xintercept = 1.5:3.5,
-                 color = "gray") + stat_compare_means(
-                   label = "p.signif",
-                   label.y = 1.7, method = "anova",
-                   hide.ns = T
-                 ) + geom_point(aes(fill = is_SCD),
-                                size = 2, color = "black",
-                                shape = 21, alpha = 0.8,
-                                position = position_jitterdodge(
-                                  jitter.width = 0.3))
+       aes(x = ROI_pair,
+           y = Z_FC,
+           fill = is_SCD)
+  ) + geom_boxplot(outlier.shape = NA
+  ) + scale_fill_manual(values=c(
+    "#f1a340", "#998ec3")
+  ) + ggtitle("Baseline: T0"
+  ) + xlab("ROI pairs"
+  ) + ylab("Functional connectivity (Z)"
+  ) + labs(fill = "Group"
+  ) + theme_bw() + ylim(-0.5, 2.25
+  ) + scale_x_discrete(
+    labels=c("RINS_ACC" = "ACC-RINS",
+             "ACC_LINS" = "ACC-LINS",
+             "RIFG_ACC" = "ACC-RMFG",
+             "ACC_LIFG" = "ACC-LMFG",
+             "LPIN_ACC" = "CON-L",
+             "RPIN_ACC" = "CON-R")
+  ) + theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.text = element_text(size = 12),
+    axis.title = element_text(size = 12,
+                              face = "bold"),
+    plot.title = element_text(hjust = 0.5,
+    face = "bold")
+  ) + geom_vline(xintercept = 1.5:5.5,
+                 color = "black",
+                 size = 0.2
+  ) + stat_compare_means(
+    label = "p.signif",
+    label.y = 1.7, method = "anova",
+    hide.ns = T
+  ) + geom_point(aes(fill = is_SCD),
+    size = 2, color = "black",
+    shape = 21, alpha = 0.8,
+    position = position_jitterdodge(
+    jitter.width = 0.3)
+  ) + geom_hline(
+    yintercept = 0,
+    color = "gray",
+    size = 0.2,
+    linetype = "dashed")
 ggsave("figures/boxplot_T0_all.jpg", width = 30,
        height = 20, units = "cm", dpi = 400)
 
 # T1
 ggplot(total_long_t1,
-       aes(x=reorder(ROI_pair, Z_FC, FUN = median),
-           y=Z_FC,
-           fill=is_SCD)) + 
-  geom_boxplot(outlier.shape = NA
-               ) + scale_fill_manual(values=c(
-    "tomato", "yellow")
-  ) + ggtitle("T1"
-  ) + xlab("ROI pairs") + ylab(
-    "Functional connectivity (Z)"
-  ) + labs(fill = "Group") + theme_bw() + ylim(-0.5, 2.5
-  ) + scale_x_discrete(labels=c("RINS_ACC" = "ACC-RINS",
-                                "ACC_LINS" = "ACC-LINS",
-                                "RIFG_ACC" = "ACC-RMFG",
-                                "ACC_LIFG" = "ACC-LMFG")
+       aes(x = ROI_pair,
+           y = Z_FC,
+           fill = is_SCD)
+  ) + geom_boxplot(outlier.shape = NA
+  ) + scale_fill_manual(values=c(
+                 "#f1a340", "#998ec3")
+  ) + ggtitle("Follow-up: T1"
+  ) + xlab("ROI pairs"
+  ) + ylab("Functional connectivity (Z)"
+  ) + labs(fill = "Group"
+  ) + theme_bw() + ylim(-0.5, 2.25
+  ) + scale_x_discrete(
+    labels=c("RINS_ACC" = "ACC-RINS",
+             "ACC_LINS" = "ACC-LINS",
+             "RIFG_ACC" = "ACC-RMFG",
+             "ACC_LIFG" = "ACC-LMFG",
+             "LPIN_ACC" = "CON-L",
+             "RPIN_ACC" = "CON-R")
   ) + theme(panel.grid.major = element_blank(),
             panel.grid.minor = element_blank(),
-            axis.text=element_text(size=12),
-            plot.title = element_text(
-              hjust = 0.5,
+            axis.ticks.x = element_blank(),
+            axis.text = element_text(size = 12),
+            axis.title = element_text(size = 12,
+                                      face = "bold"),
+            plot.title = element_text(hjust = 0.5,
               face = "bold")
-            ) + geom_vline(
-              xintercept = 1.5:3.5,
-              color = "gray") + stat_compare_means(
-                label = "p.signif",
-                label.y = 1.7, method = "anova",
-                hide.ns = T
-              ) + geom_point(aes(fill = is_SCD),
-                             size = 2, color = "black",
-                             shape = 21, alpha = 0.8,
-                             position = position_jitterdodge(
-                               jitter.width = 0.3))
+  ) + geom_vline(xintercept = 1.5:5.5,
+                 color = "black",
+                 size = 0.2
+  ) + stat_compare_means(
+    label = "p.signif",
+    label.y = 1.7, method = "anova",
+    hide.ns = T
+  ) + geom_point(aes(fill = is_SCD),
+                 size = 2, color = "black",
+                 shape = 21, alpha = 0.8,
+                 position = position_jitterdodge(
+                 jitter.width = 0.3)
+  ) + geom_hline(yintercept = 0,
+    color = "gray",
+    size = 0.2,
+    linetype = "dashed")
 ggsave("figures/boxplot_T1.jpg", width = 30,
        height = 20, units = "cm", dpi = 400)
 
 # T2
 ggplot(total_long_t2,
-       aes(x=reorder(ROI_pair, Z_FC, FUN = median),
-           y=Z_FC,
-           fill=is_SCD)) + 
+       aes(x = ROI_pair,
+           y = Z_FC,
+           fill = is_SCD)) + 
   geom_boxplot(outlier.shape = NA
-               ) + scale_fill_manual(values=c(
-    "tomato", "yellow")
-  ) + xlab("ROI pairs") + ylab(
-    "Functional connectivity (Z)"
-  ) + ggtitle("T2"
-  ) + labs(fill = "Group") + theme_bw() + ylim(-0.5, 2.5
-  ) + scale_x_discrete(labels=c("RINS_ACC" = "ACC-RINS",
-                                "ACC_LINS" = "ACC-LINS",
-                                "RIFG_ACC" = "ACC-RMFG",
-                                "ACC_LIFG" = "ACC-LMFG")
+  ) + scale_fill_manual(values=c(
+                 "#f1a340", "#998ec3")
+  ) + xlab("ROI pairs"
+  ) + ylab("Functional connectivity (Z)"
+  ) + ggtitle("Follow-up: T2"
+  ) + labs(fill = "Group"
+  ) + theme_bw() + ylim(-0.5, 2.25
+  ) + scale_x_discrete(
+    labels=c("RINS_ACC" = "ACC-RINS",
+             "ACC_LINS" = "ACC-LINS",
+             "RIFG_ACC" = "ACC-RMFG",
+             "ACC_LIFG" = "ACC-LMFG",
+             "LPIN_ACC" = "CON-L",
+             "RPIN_ACC" = "CON-R")
   ) + theme(panel.grid.major = element_blank(),
             panel.grid.minor = element_blank(),
-            axis.text=element_text(size=12),
+            axis.ticks.x = element_blank(),
+            axis.text = element_text(size = 12),
+            axis.title = element_text(size = 12,
+                                      face = "bold"),
             plot.title = element_text(hjust = 0.5,
                                       face = "bold")
-  ) + geom_vline(xintercept = 1.5:3.5,
-                 color = "gray", #ADJUST LINETYPE
-                 linetype = "longdash") + stat_compare_means(
-                   label = "p.signif",
-                   label.y = 1.7, method = "anova",
-                   hide.ns = T
-                   ) + geom_point(aes(fill = is_SCD),
-                                size = 2, color = "black",
-                                shape = 21, alpha = 0.6,
-                                position = position_jitterdodge(
-                                  jitter.width = 0.3))
+  ) + geom_vline(xintercept = 1.5:5.5,
+                 color = "black",
+                 size = 0.2
+  ) + stat_compare_means(
+    label = "p.signif",
+    label.y = 1.7, method = "anova",
+    hide.ns = T
+  ) + geom_point(aes(fill = is_SCD),
+                 size = 2, color = "black",
+                 shape = 21, alpha = 0.8,
+                 position = position_jitterdodge(
+                 jitter.width = 0.3)
+  ) + geom_hline(yintercept = 0,
+                 color = "gray",
+                 size = 0.2,
+                 linetype = "dashed")
 ggsave("figures/boxplot_T2.jpg", width = 30,
        height = 20, units = "cm", dpi = 400)
 
-
 ## Box plots of average SN FC per time point
 
-# Average FC T0
-ggplot(total_t0,
-       aes(x=is_SCD, y=SN_FC_1,
-           fill=is_SCD)) +
-  geom_boxplot(outlier.shape = NA, width = 0.4,
-  notch = F) + scale_fill_manual(values=c(
-    "tomato", "yellow")
-  ) + ggtitle("T0"
-  ) + ylab("Average Functional Connectivity (Z)"
-  ) + labs(fill = "Group") + theme_bw() + ylim(0, 1.5
-  ) + theme(axis.text=element_text(size=12),
-            axis.title.x=element_blank(),
-            plot.title = element_text(hjust = 0.5,
-                                      face = "bold")
-            ) + geom_point(aes(fill = is_SCD),
-                 size = 4, color = "black",
-                 shape = 21, alpha = 0.8,
-                 position = position_jitterdodge(
-                   jitter.width = 0.3))
-ggsave("figures/boxplot_avr_T0.jpg", width = 30,
-       height = 20, units = "cm", dpi = 400)
+# Turn Timepoint into a factor
+total$timepoint <- as.factor(total$timepoint)
 
-# Average FC T1
-ggplot(total_t1,
-       aes(x=is_SCD, y=SN_FC_2,
-           fill=is_SCD)) +
-  geom_boxplot(#width = 0.5/length(unique(total_t1$is_SCD))
-    outlier.shape = NA, width = 0.4,
-    notch = F) + scale_fill_manual(values=c(
-    "tomato", "yellow")
-  ) + ggtitle("T1"
+# Average FC
+ggplot(total,
+       aes(x = timepoint, y = SN_FC,
+           fill = is_SCD)
+  ) + geom_boxplot(outlier.shape = NA,
+                   width = 0.7
+  ) + scale_fill_manual(values = c(
+    "#f1a340", "#998ec3")
   ) + ylab("Average Functional Connectivity (Z)"
-  ) + theme_bw() + labs(fill = "Group") + ylim(0, 1.5
-  ) + theme(axis.text=element_text(size=12),
-            axis.title.x=element_blank(),
-            plot.title = element_text(hjust = 0.5,
+  ) + xlab("Timepoints"
+  ) + labs(fill = "Group"
+  ) + scale_x_discrete(
+    labels=c("1" = "T0",
+             "2" = "T1",
+             "3" = "T2")
+  ) + theme_bw() + ylim(0.05, 1.5
+  ) + theme(panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank(),
+            axis.ticks.x = element_blank(),
+            axis.text = element_text(size = 12),
+            axis.title = element_text(size = 12,
                                       face = "bold")
-  ) + geom_point(aes(fill = is_SCD), size = 4,
-                 shape = 21, alpha = 0.8,
+  ) + geom_point(aes(fill = is_SCD),
+                 size = 2,
+                 shape = 21, alpha = 0.6,
                  position = position_jitterdodge(
-                   jitter.width = 0.3
-                 ))
-ggsave("figures/boxplot_avr_T1.jpg", width = 30,
-       height = 20, units = "cm", dpi = 400)
-
-# Average FC T2
-ggplot(total_t2,
-       aes(x=is_SCD, y=SN_FC_3,
-           fill=is_SCD)) +
-  geom_boxplot(#width = 0.5/length(unique(total_t1$is_SCD))
-    outlier.shape = NA, width = 0.4,
-    notch = F) + scale_fill_manual(values=c(
-    "tomato", "yellow")
-  ) + ggtitle("T2"
-  ) + ylab("Average Functional Connectivity (Z)"
-  ) + theme_bw() + labs(fill = "Group") + ylim(0, 1.5
-  ) + theme(axis.text=element_text(size=12),
-            axis.title.x=element_blank(),
-            plot.title = element_text(hjust = 0.5,
-                                      face = "bold")
-  ) + geom_point(aes(fill = is_SCD), size = 4,
-                 shape = 21, alpha = 0.8,
-                 position = position_jitterdodge(
-                   jitter.width = 0.3
-                 )) + stat_compare_means(
-                   label = "p.format",
-                   comparisons = list(c("SCD",
-                                        "CON"))
-                 )
-ggsave("figures/boxplot_avr_T2.jpg", width = 30,
+                   jitter.width = 0.3)
+  ) + geom_vline(xintercept = 1.5:2.5,
+                 color = "black",
+                 size = 0.2
+  ) + stat_compare_means(
+    label = "p.signif",
+    label.y = 1.45, method = "anova",
+    hide.ns = T)
+ggsave("figures/boxplot_avr.jpg", width = 30,
        height = 20, units = "cm", dpi = 400)
 
 
@@ -940,7 +988,3 @@ baseline <- data.frame(total_t0$filename[which(
     total_t0$filename %in% tp02$filename==FALSE &
     total_t0$filename %in% tp12$filename==FALSE)])
 colnames(baseline)[1] <- "filename"
-
-# Delete the "followup" data frame, to avoid getting...
-# ...confused
-rm(followup)
