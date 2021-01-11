@@ -358,7 +358,11 @@ total_all_long$timepoint[which(
   # Delete the number from the ROI pairs
 total_all_long$ROI_pair <- sub("_[0-9]", "",
                                total_all_long$ROI_pair)
-total_all_long$ROI_pair <- factor(total_all_long$ROI_pair)
+total_all_long$ROI_pair <- factor(
+  total_all_long$ROI_pair,
+  levels = c("ACC_LIFG", "RIFG_ACC",
+             "ACC_LINS", "RINS_ACC",
+             "LPIN_ACC", "RPIN_ACC"))
 
 ## Actual ANOVA
 res.aov.total_all_long <- anova_test(data = total_all_long,
@@ -899,6 +903,58 @@ ggplot(total_long_t2,
                  size = 0.2,
                  linetype = "dashed")
 ggsave("figures/boxplot_T2.jpg", width = 30,
+       height = 20, units = "cm", dpi = 400)
+
+# Overall across ROI pairs
+ggplot(total_all_long,
+       aes(x = ROI_pair,
+           y = Z_FC,
+           fill = ROI_pair)
+  ) + geom_violin(
+  ) + scale_fill_manual(values=c("#1f78b4", "#1f78b4",
+                                 "#a6cee3", "#a6cee3",
+                                 "#b2df8a", "#b2df8a")
+  ) + xlab("ROI pairs"
+  ) + ylab("Functional connectivity (Z)"
+  ) + ggtitle("Main effect of ROI pairs"
+  ) + ylim(-0.25, 2.25
+  ) + scale_x_discrete(
+    labels=c("RINS_ACC" = "ACC-RINS",
+             "ACC_LINS" = "ACC-LINS",
+             "RIFG_ACC" = "ACC-RMFG",
+             "ACC_LIFG" = "ACC-LMFG",
+             "LPIN_ACC" = "CON-L",
+             "RPIN_ACC" = "CON-R")
+  ) + theme(panel.grid.minor = element_blank(),
+            axis.ticks.x = element_blank(),
+            legend.position = "NULL",
+            axis.text = element_text(size = 12),
+            axis.title = element_text(size = 12,
+                                      face = "bold"),
+            plot.title = element_text(hjust = 0.5,
+                                      face = "bold")
+  ) + geom_vline(xintercept = 4.5,
+                 color = "black",
+                 size = 0.2
+  ) + stat_compare_means(
+    label = "p",
+    label.y = c(1.55, 1.75, 1.75, 1.95, 2.1, 2.25),
+    comparisons = list(c("RINS_ACC", "RIFG_ACC"),
+                       c("ACC_LINS", "ACC_LIFG"),
+                       c("RINS_ACC", "RPIN_ACC"),
+                       c("ACC_LINS", "LPIN_ACC"),
+                       c("RIFG_ACC", "RPIN_ACC"),
+                       c("ACC_LIFG", "LPIN_ACC")),
+    tip.length = 0.01,
+    hide.ns = T
+  ) + geom_hline(yintercept = 0,
+                 color = "gray",
+                 size = 0.2,
+                 linetype = "dashed"
+  ) + geom_boxplot(width = 0.1, fill = "white",
+                   alpha = 0.7,
+                   outlier.shape = NA)
+ggsave("figures/boxplot_ROIs.jpg", width = 30,
        height = 20, units = "cm", dpi = 400)
 
 ## Box plots of average SN FC per time point
