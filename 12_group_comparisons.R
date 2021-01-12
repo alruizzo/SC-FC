@@ -11,7 +11,8 @@
 # pacman::p_load(ggplot2, dplyr, ggthemes, ggvis, plotly,
 #                rio, stringr, tidyr, readxl, ggpubr,
 #                psych, car, tidyverse, rstatix, cocor,
-#                ppcor, RColorBrewer, Hmisc, DescTools)
+#                ppcor, RColorBrewer, Hmisc, DescTools,
+#                permuco, CorrMixed)
 
 
 ####==========================================================
@@ -374,6 +375,14 @@ res.aov.total_all_long <- anova_test(data = total_all_long,
                                effect.size = "pes")
 get_anova_table(res.aov.total_all_long, correction = "auto")
 
+  # ANOVA Permutations (if you want to compare)
+res.aov.total_all_long_perm <- aovperm(
+  formula = Z_FC ~ is_SCD * ROI_pair * timepoint
+  + Error(filename/(timepoint*ROI_pair)),
+          data = total_all_long,
+  np = 10000)
+res.aov.total_all_long_perm
+
 
 ####==========================================================
 ### TWO-WAY MIXED ANOVA AVERAGE FC
@@ -517,6 +526,9 @@ levene_test(total_long_t1, Z_FC~is_SCD*ROI_pair)
   # T2
 levene_test(total_long_t2, Z_FC~is_SCD*ROI_pair)
 
+  # SN FC
+levene_test(total_long_fc_sn, Z_FC~is_SCD*timepoint)
+
 
 ####==========================================================
 ### MIXED ANOVAS FOR EACH TIME POINT SEPARATELY
@@ -539,8 +551,7 @@ res.aov.baseline <- anova_test(data = total_long_t0,
                              effect.size = "pes")
 anovat <- get_anova_table(res.aov.baseline,
                           correction = "auto")
-write.table(anovat,
-     file = "baseline_ANOVA.txt",
+write.table(anovat, file = "baseline_ANOVA.txt",
      quote = F, sep = " | ", row.names = F)
 
 # T1
@@ -552,8 +563,7 @@ res.aov.t1 <- anova_test(data = total_long_t1,
                                effect.size = "pes")
 anovat <- get_anova_table(res.aov.t1,
                           correction = "auto")
-write.table(anovat,
-            file = "t1_ANOVA.txt",
+write.table(anovat, file = "t1_ANOVA.txt",
             quote = F, sep = " | ", row.names = F)
 
 # T2
@@ -565,9 +575,15 @@ res.aov.t2 <- anova_test(data = total_long_t2,
                          effect.size = "pes")
 anovat <- get_anova_table(res.aov.t2,
                           correction = "auto")
-write.table(anovat,
-            file = "t2_ANOVA.txt",
+write.table(anovat, file = "t2_ANOVA.txt",
             quote = F, sep = " | ", row.names = F)
+  # permuted version, just in case:
+res.aov.t2_perm <- aovperm(
+  formula = Z_FC ~ is_SCD * ROI_pair
+  + Error(filename/(ROI_pair)),
+  data = total_long_t2,
+  np = 10000)
+res.aov.t2_perm
 
 
 ####==========================================================
@@ -664,6 +680,7 @@ write.csv(bs,
 ## separately per time point
 
 ## Average FC
+# Relevant to understand the interaction above
 ws <- total_long_fc_sn %>%
   group_by(is_SCD) %>%
   anova_test(dv = Z_FC, wid = filename,
@@ -671,6 +688,16 @@ ws <- total_long_fc_sn %>%
   get_anova_table() %>% adjust_pvalue(
     method = "holm")
 ws
+  # Descriptives for SCD across time points
+describeBy(total_long_fc_sn$Z_FC[which(
+  total_long_fc_sn$is_SCD=="SCD")],
+  total_long_fc_sn$timepoint[which(
+    total_long_fc_sn$is_SCD=="SCD")])
+# Descriptives for CON across time points
+describeBy(total_long_fc_sn$Z_FC[which(
+  total_long_fc_sn$is_SCD=="CON")],
+  total_long_fc_sn$timepoint[which(
+    total_long_fc_sn$is_SCD=="CON")])
 
 ## ROIs
 ## Within each BS group, comparing within conditions 
@@ -711,6 +738,16 @@ ws
 pwc <- total_all_long %>% 
   pairwise_t_test(
     Z_FC ~ ROI_pair, pool.sd = FALSE,
+    p.adjust.method = "holm"
+  )
+pwc[which(pwc$p.adj.signif!="ns"),]
+
+# Across time points for SCD
+pwc <- total_all_long[which(
+  total_all_long$is_SCD=="SCD"),] %>% 
+  group_by(ROI_pair) %>%
+  pairwise_t_test(
+    Z_FC ~ timepoint, pool.sd = FALSE,
     p.adjust.method = "holm"
   )
 pwc[which(pwc$p.adj.signif!="ns"),]
@@ -985,7 +1022,7 @@ ggplot(total,
             axis.title = element_text(size = 12,
                                       face = "bold")
   ) + geom_point(aes(fill = is_SCD),
-                 size = 2,
+                 size = 3,
                  shape = 21, alpha = 0.6,
                  position = position_jitterdodge(
                    jitter.width = 0.3)
@@ -997,6 +1034,48 @@ ggplot(total,
     label.y = 1.45, method = "anova",
     hide.ns = T)
 ggsave("figures/boxplot_avr.jpg", width = 30,
+       height = 20, units = "cm", dpi = 400)
+
+# Average FC individual lines
+ggplot(total,
+       aes(x = timepoint,
+           y = SN_FC,
+           group = filename,
+           fill = is_SCD)
+) + scale_fill_manual(values = c(
+  "#f1a340", "#998ec3")
+) + scale_x_discrete(name = "Timepoints",
+  labels=c("1" = "T0",
+           "2" = "T1",
+           "3" = "T2")
+) + scale_y_continuous(name = "Average Functional Connectivity (Z)",
+                       breaks=seq(0, 1.50, 0.25)
+) + theme_bw(
+) + theme(#panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          legend.box.background = element_rect(),
+          panel.border = element_blank(),
+          axis.line = element_line(color = 'black',
+                                   size = 0.4),
+          axis.ticks.x = element_blank(),
+          axis.text = element_text(size = 12),
+          axis.title = element_text(size = 12,
+                                    face = "bold")
+) + geom_point(aes(fill = is_SCD),
+               size = 1, alpha = 0.8,
+               shape = 21
+) + geom_line(aes(color = is_SCD),
+              alpha = 0.5
+              ) + scale_color_manual(values = c(
+   "#f1a340", "#998ec3")
+) + labs(color = "Group", fill = "Group"
+) + stat_summary(aes(group = is_SCD, color = is_SCD),
+                 geom = "line", fun = mean, size = 1.5,
+                 show.legend = F
+) + geom_smooth(aes(group = is_SCD,
+                    color = is_SCD),
+                alpha = 0.3)
+ggsave("figures/boxplot_indiv_points.jpg", width = 30,
        height = 20, units = "cm", dpi = 400)
 
 
