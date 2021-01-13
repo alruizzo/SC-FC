@@ -228,6 +228,7 @@ levels(total$is_SCD)["CON"] <- "CON"
 total$is_SCD <- factor(total$is_SCD,
                        levels = c("SCD", "CON"))
 total$filename <- factor(total$filename)
+total$timepoint <- factor(total$timepoint)
 
 
 ####==========================================================
@@ -341,7 +342,8 @@ total_all_long <- pivot_longer(
   total_wide,
   names_to = "ROI_pair",
   cols = ACC_LIFG_1:RPIN_ACC_3,
-  values_to = "Z_FC")
+  values_to = "Z_FC",
+  values_drop_na = TRUE)
 
   # Make some adjustments to the new data frame
 total_all_long <- data.frame(total_all_long)
@@ -355,6 +357,7 @@ total_all_long$timepoint[which(
   grepl("2", total_all_long$ROI_pair)==T)] <- "2"
 total_all_long$timepoint[which(
   grepl("3", total_all_long$ROI_pair)==T)] <- "3"
+total_all_long$timepoint <- factor(total_all_long$timepoint)
 
   # Delete the number from the ROI pairs
 total_all_long$ROI_pair <- sub("_[0-9]", "",
@@ -390,21 +393,21 @@ res.aov.total_all_long_perm
 ## DV: Z_FC
 
 ## Prepare the data
+
 # Convert data frame to long format
 total_long_fc_sn <- pivot_longer(
   total_wide_fc_sn,
   names_to = "timepoint",
+  names_prefix = "SN_FC_",
   cols = SN_FC_1:SN_FC_3,
-  values_to = "Z_FC")
+  values_to = "Z_FC",
+  values_drop_na = TRUE)
 
 # Make some adjustments to the new data frame
 total_long_fc_sn <- data.frame(total_long_fc_sn)
 total_long_fc_sn$filename <- factor(
   total_long_fc_sn$filename)
-
-# Create a column for time point
-total_long_fc_sn$timepoint <- as.factor(substr(
-  total_long_fc_sn$timepoint, 7, 7))
+total_long_fc_sn$timepoint <- factor(total_long_fc_sn$timepoint)
 
 ## Actual ANOVA
 res.aov.total_long_fc_sn <- anova_test(
@@ -425,7 +428,8 @@ get_anova_table(res.aov.total_long_fc_sn, correction = "auto")
 # Total with all time points
 total_long <- pivot_longer(total_MCI, names_to = "ROI_pair",
                            cols = ACC_LIFG:RPIN_ACC,
-                           values_to = "Z_FC")
+                           values_to = "Z_FC",
+                           values_drop_na = TRUE)
 total_long <- data.frame(total_long)
 total_long$filename <- factor(
   substr(total_long$filename, 1, 12))
@@ -599,10 +603,6 @@ bs <- total_long_fc_sn %>%
              between = is_SCD) %>%
   get_anova_table() %>% adjust_pvalue(
     method = "holm")
-write.csv(bs,
-          file = paste("/figures/",
-                       "oneway_baseline_ANOVA_avr_fc_sn.csv"),
-          quote = F, row.names = F)
 
 ## ROIs
 # Within each WS condition, comparing between subjects (BS)
@@ -614,13 +614,7 @@ bs <- total_long_t0_all %>%
              between = is_SCD) %>%
   get_anova_table() %>% adjust_pvalue(
     method = "holm")
-      # See result
 bs
-      # Save result
-write.csv(bs,
-          file = paste("/figures/",
-                       "oneway_baseline_ANOVA_all.csv"),
-          quote = F, row.names = F)
 
     # SCD-CON
 bs <- total_long_t0 %>%
@@ -629,13 +623,7 @@ bs <- total_long_t0 %>%
              between = is_SCD) %>%
   get_anova_table() %>% adjust_pvalue(
     method = "holm")
-      # See result
 bs
-      # Save result
-write.csv(bs,
-            file = paste("/figures/",
-            "oneway_baseline_ANOVA.csv"),
-            quote = F, row.names = F)
 
   # T1
 bs <- total_long_t1 %>%
@@ -644,13 +632,7 @@ bs <- total_long_t1 %>%
              between = is_SCD) %>%
   get_anova_table() %>% adjust_pvalue(
     method = "holm")
-    # See result
 bs
-    # Save result
-write.csv(bs,
-          file = paste("/figures/",
-                       "oneway_t1_ANOVA.csv"),
-          quote = F, row.names = F)
 
   # T2
 bs <- total_long_t2 %>%
@@ -659,7 +641,6 @@ bs <- total_long_t2 %>%
              between = is_SCD) %>%
   get_anova_table() %>% adjust_pvalue(
     method = "holm")
-    # See result
 bs
     # Obtain descriptives for significant results:
     # ACC_LIFG and ACC_LINS
@@ -668,8 +649,7 @@ describeBy(total_long_t2$Z_FC[which(
   total_long_t2$is_SCD[which(
     total_long_t2$ROI_pair=="ACC_LINS")])
   # Save result
-write.csv(bs,
-          file = paste("/figures/",
+write.csv(bs, file = paste("/figures/",
                        "oneway_t2_ANOVA.csv"),
           quote = F, row.names = F)
 
@@ -684,7 +664,8 @@ write.csv(bs,
 ws <- total_long_fc_sn %>%
   group_by(is_SCD) %>%
   anova_test(dv = Z_FC, wid = filename,
-             within = timepoint, effect.size = "pes") %>%
+             within = c(timepoint, type),
+             effect.size = "pes") %>%
   get_anova_table() %>% adjust_pvalue(
     method = "holm")
 ws
@@ -997,7 +978,8 @@ ggsave("figures/boxplot_ROIs.jpg", width = 30,
 ## Box plots of average SN FC per time point
 
 # Turn Timepoint into a factor
-total$timepoint <- as.factor(total$timepoint)
+if (!is.factor(total$timepoint)){
+total$timepoint <- as.factor(total$timepoint)}
 
 # Average FC
 ggplot(total,
