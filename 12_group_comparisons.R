@@ -207,16 +207,25 @@ total <- total[, c(1:7, 9:10, 8)]
 ### PARTICIPANT EXCLUSION
 ## Exclude those participants from total
 
-## Total
+## Total with complete resting-state data only
 total_orig <- total
 total <- total_orig[-which(
   total_orig$filename %in% Excluded==TRUE),]
 rownames(total) <- NULL
 
-# ## Demographics (ONE TIME STEP) hence, commented
-# demographics_t0 <- demographics_t0[-which(
-#   demographics_t0$ParticipantID %in% Excluded==TRUE),]
-# rownames(demographics_t0) <- NULL
+## OR Total with complete diffusion AND resting-state data
+## Choose only one option, otherwise, you'll have different...
+## ...number of participants!
+total <- total[-c(
+  which(total$filename == "wsu-con-0001" & total$timepoint == "1"),
+  which(total$filename == "wsu-con-0002" & total$timepoint == "1"),
+  which(total$filename == "wsu-con-0003" & total$timepoint == "1"),
+  which(total$filename == "wsu-sci-0001" & total$timepoint == "1"),
+  which(total$filename == "wsu-sci-0002" & total$timepoint == "1"),
+  which(total$filename == "wsu-sci-0003" & total$timepoint == "1"),
+  which(total$filename == "wsu-sci-0004" & total$timepoint == "1"),
+  which(total$filename == "wsu-sci-0007" & total$timepoint == "3")
+  ),]
 
 ## Adjust total to excluding MCI
 total_MCI <- total_orig[-which(
@@ -407,7 +416,8 @@ total_long_fc_sn <- pivot_longer(
 total_long_fc_sn <- data.frame(total_long_fc_sn)
 total_long_fc_sn$filename <- factor(
   total_long_fc_sn$filename)
-total_long_fc_sn$timepoint <- factor(total_long_fc_sn$timepoint)
+total_long_fc_sn$timepoint <- factor(
+  total_long_fc_sn$timepoint)
 
 ## Actual ANOVA
 res.aov.total_long_fc_sn <- anova_test(
@@ -603,6 +613,7 @@ bs <- total_long_fc_sn %>%
              between = is_SCD) %>%
   get_anova_table() %>% adjust_pvalue(
     method = "holm")
+bs
 
 ## ROIs
 # Within each WS condition, comparing between subjects (BS)
@@ -826,7 +837,7 @@ ggplot(total_long_t0,
     color = "gray",
     size = 0.2,
     linetype = "dashed")
-ggsave("figures/boxplot_T0_all.jpg", width = 30,
+ggsave("figures/boxplot_T0.jpg", width = 30,
        height = 20, units = "cm", dpi = 400)
 
 # T1
