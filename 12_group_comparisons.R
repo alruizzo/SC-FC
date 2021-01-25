@@ -202,6 +202,12 @@ total <- cbind(total, totalcon)
 # Adjust total columns to have SN-FC at the end
 total <- total[, c(1:7, 9:10, 8)]
 
+# Obtain average FC for control ROI pairs
+total$CON_FC <- round(rowMeans(
+  subset(total,
+         select = c(LPIN_ACC,RPIN_ACC)),
+  na.rm = TRUE), 2)
+
 
 ####==========================================================
 ### PARTICIPANT EXCLUSION
@@ -303,40 +309,40 @@ total_t2 <- total_t2[, -which(
 ## ...exported the values and how they need to be...
 ## ...transformed in the next step (long format)
 
-## Merge data frames according to file names (2 steps)
-  # Create temporal file to merge first part
+# Merge data frames according to file names (2 steps)
+# Create temporal file to merge first part
 temp <- merge(data.frame(total_t0, row.names=NULL),
                data.frame(total_t1, row.names=NULL),
                by = "filename",
                all = TRUE)
-  # Merge temporal file with second part
+# Merge temporal file with second part
 total_wide <- merge(data.frame(temp, row.names=NULL),
               data.frame(total_t2, row.names=NULL),
               by = "filename",
               all = TRUE)
 
-## Adjust column names, especially to remove duplicates
-  # Remove the ".y" part from the column names
+# Adjust column names, especially to remove duplicates
+# ...Remove the ".y" part from the column names
 total_wide <- total_wide[, -which(
   grepl(".y", colnames(total_wide))==TRUE)]
 
-  # Remove the .x from the "is_SCD" variable
+# Remove the .x from the "is_SCD" variable
 colnames(total_wide)[which(
   colnames(total_wide)=="is_SCD.x")] <- "is_SCD"
   
-  # Remove duplicated variables
+# Remove duplicated variables
 total_wide <- total_wide[, -which(
   duplicated(colnames(total_wide))==TRUE)]
 
-## Create one separate data frame for the average FC
+# Create one separate data frame for the average FC
 total_wide_fc_sn <- total_wide[, c(1, 2, which(
-  grepl("SN_FC_", colnames(total_wide))==TRUE))]
+  grepl("_FC_", colnames(total_wide)) == TRUE))]
 
-## Delete the average FC columns from "total_wide"
+# Delete the average FC columns from "total_wide"
 total_wide <- total_wide[, -which(
-  grepl("SN_FC_", colnames(total_wide))==TRUE)]
+  grepl("_FC_", colnames(total_wide)) == TRUE)]
 
-## Remove the previously-created "temp" to clean work space
+# Remove the previously-created "temp" to clean work space
 rm(temp)
 
 
@@ -345,39 +351,27 @@ rm(temp)
 ## WS: time point and ROI / BS: SCD
 ## DV: Z_FC
 
-## Prepare the data
-  # Convert data frame to long format
+# Convert data frame to long format
 total_all_long <- pivot_longer(
   total_wide,
-  names_to = "ROI_pair",
+  names_to = c("ROI_pair", "timepoint"),
   cols = ACC_LIFG_1:RPIN_ACC_3,
+  names_pattern = "(.*)_(.*)",
   values_to = "Z_FC",
   values_drop_na = TRUE)
 
-  # Make some adjustments to the new data frame
+# Make some adjustments to the new data frame
 total_all_long <- data.frame(total_all_long)
 total_all_long$filename <- factor(total_all_long$filename)
-
-  # Create a column for time point based on "ROI_pairs"
-total_all_long$timepoint <- "0"
-total_all_long$timepoint[which(
-  grepl("1", total_all_long$ROI_pair)==T)] <- "1"
-total_all_long$timepoint[which(
-  grepl("2", total_all_long$ROI_pair)==T)] <- "2"
-total_all_long$timepoint[which(
-  grepl("3", total_all_long$ROI_pair)==T)] <- "3"
+total_all_long$timepoint <- as.numeric(total_all_long$timepoint)
 total_all_long$timepoint <- factor(total_all_long$timepoint)
-
-  # Delete the number from the ROI pairs
-total_all_long$ROI_pair <- sub("_[0-9]", "",
-                               total_all_long$ROI_pair)
 total_all_long$ROI_pair <- factor(
   total_all_long$ROI_pair,
   levels = c("ACC_LIFG", "RIFG_ACC",
              "ACC_LINS", "RINS_ACC",
              "LPIN_ACC", "RPIN_ACC"))
 
-## Actual ANOVA
+# ANOVA
 res.aov.total_all_long <- anova_test(data = total_all_long,
                                dv = Z_FC,
                                wid = filename,
@@ -401,13 +395,11 @@ res.aov.total_all_long_perm
 ## WS: time point / BS: SCD (same as the previous section)
 ## DV: Z_FC
 
-## Prepare the data
-
 # Convert data frame to long format
 total_long_fc_sn <- pivot_longer(
   total_wide_fc_sn,
-  names_to = "timepoint",
-  names_prefix = "SN_FC_",
+  names_to = c("ROI", "timepoint"),
+  names_pattern = "(.*)_(.*)",
   cols = SN_FC_1:SN_FC_3,
   values_to = "Z_FC",
   values_drop_na = TRUE)
@@ -418,14 +410,16 @@ total_long_fc_sn$filename <- factor(
   total_long_fc_sn$filename)
 total_long_fc_sn$timepoint <- factor(
   total_long_fc_sn$timepoint)
+total_long_fc_sn$ROI <- factor(
+  total_long_fc_sn$ROI)
 
-## Actual ANOVA
+# ANOVA
 res.aov.total_long_fc_sn <- anova_test(
   data = total_long_fc_sn,
   dv = Z_FC,
   wid = filename,
   between = is_SCD,
-  within = timepoint,
+  within = c("timepoint", "ROI"),
   effect.size = "pes")
 get_anova_table(res.aov.total_long_fc_sn, correction = "auto")
 
