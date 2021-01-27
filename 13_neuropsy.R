@@ -177,18 +177,36 @@ neuropsy$timepoint <- factor(neuropsy$timepoint)
 
 # Check variables to convert them into appropriate format
 colnames(neuropsy)
-neuropsy[, c(3:4, which(
-  colnames(neuropsy)=="GeriatricDepressionScaleTotalScore"
-  ):length(neuropsy))] <- sapply(neuropsy[, c(3:4, which(
-    colnames(neuropsy)=="GeriatricDepressionScaleTotalScore"
-  ):length(neuropsy))], as.numeric)
+neuropsy[, c(which(colnames(neuropsy)=="AgeatBaseline"),
+             which(colnames(neuropsy)=="AgeatTesting"), which(
+               colnames(neuropsy)=="GeriatricDepressionScaleTotalScore"
+               ):length(neuropsy))] <- sapply(neuropsy[, c(
+                 which(colnames(neuropsy)=="AgeatBaseline"),
+                 which(colnames(neuropsy)=="AgeatTesting"),
+                 which(colnames(neuropsy)=="GeriatricDepressionScaleTotalScore"
+                       ):length(neuropsy))], as.numeric)
+neuropsy[, c(which(colnames(neuropsy)=="Gender"),
+             which(
+               colnames(neuropsy)=="DoctorSeen.forMemoryComplaints"):which(
+                 colnames(neuropsy)=="VENIHighest.DegreeEarned"))
+         ] <- sapply(neuropsy[, c(which(
+           colnames(neuropsy)=="Gender"), which(
+             colnames(neuropsy)=="DoctorSeen.forMemoryComplaints"
+             ):which(colnames(neuropsy)=="VENIHighest.DegreeEarned"))],
+           as.numeric)
 sapply(neuropsy, class)
+
+# Convert into factors some of the variables
 neuropsy$Gender <- factor(neuropsy$Gender)
+neuropsy$DoctorSeen.forMemoryComplaints <-
+  factor(neuropsy$DoctorSeen.forMemoryComplaints)
+neuropsy$FamilyHistoryof.AlzheimersorDementia <-
+  factor(neuropsy$FamilyHistoryof.AlzheimersorDementia)
 
 # Select the same participants as in 'total'
 neuropsy <- neuropsy[which(neuropsy$ParticipantID %in% paste(
     total$filename, "-", "0", total$timepoint,
-    sep = "") == TRUE), ]
+    sep = "") == T), ]
 rownames(neuropsy) <- NULL
 
 # Change the participant filename to match up 'total'
@@ -203,12 +221,18 @@ neuropsy$is_SCD[which(grepl(
 neuropsy$is_SCD <- factor(neuropsy$is_SCD,
                           levels = c("SCD", "CON"))
 
-# Reorganize 'neuropsy' (hard coded; be careful!!!)
-neuropsy <- neuropsy[, c(1, 2, 43, 3:42)]
+# Reorganize 'neuropsy'
+neuropsy <- neuropsy[, c(which(
+  colnames(neuropsy)=="ParticipantID"), which(
+    colnames(neuropsy)=="timepoint"), which(
+      colnames(neuropsy)=="is_SCD"), which(
+        colnames(neuropsy)=="AgeatBaseline"):length(
+        neuropsy))]
 
 # Add Age to 'total'
 total <- cbind(total, neuropsy$AgeatTesting)
-colnames(total)[12] <- "Age"
+colnames(total)[which(
+  colnames(total)=="AgeatTesting")] <- "Age"
 
 
 ####==========================================================
@@ -260,12 +284,10 @@ total_t2 <- total_t2[, -which(
 # ...transformed in the next step for ANOVAs ('long' format)
 
 # Merge data frames according to file names (2 steps)
-# Create temporal file to merge first part
 temp <- merge(data.frame(total_t0, row.names=NULL),
                data.frame(total_t1, row.names=NULL),
                by = "filename",
                all = TRUE)
-# Merge temporal file with second part
 total_wide <- merge(data.frame(temp, row.names=NULL),
               data.frame(total_t2, row.names=NULL),
               by = "filename",
@@ -534,154 +556,7 @@ t.test(total$SN_FC[which(total$timepoint=="3")],
 
 
 ####==========================================================
-# DESCRIPTIVES
-
-# Age at testing difference
-total %>% group_by(timepoint) %>%
-  t_test(Age ~ is_SCD)
-
-neuropsy %>% group_by(timepoint) %>%
-  t_test(AgeatBaseline ~ is_SCD)
-
-describeBy(neuropsy$AgeatBaseline, neuropsy$is_SCD)
-describeBy(neuropsy$AgeatTesting[which(
-  neuropsy$timepoint=="1")], neuropsy$is_SCD[which(
-    neuropsy$timepoint=="1")])
-
-describeBy(neuropsy$AgeatTesting[which(
-  neuropsy$timepoint=="1")], neuropsy$is_SCD[which(
-    neuropsy$timepoint=="1")])
-
-
-
-####==========================================================
-# PLOTTING
-# Box plots of average SN FC per time point
-
-# Turn Timepoint into a factor
-if (!is.factor(total$timepoint)){
-total$timepoint <- as.factor(total$timepoint)}
-
-# Average FC
-ggplot(total,
-       aes(x = timepoint, y = SN_FC,
-           fill = is_SCD)
-  ) + geom_boxplot(outlier.shape = NA,
-                   width = 0.7
-  ) + scale_fill_manual(values = c(
-    "#f1a340", "#998ec3")
-  ) + ylab("Average Functional Connectivity (Z)"
-  ) + xlab("Timepoints"
-  ) + labs(fill = "Group"
-  ) + scale_x_discrete(
-    labels=c("1" = "T0",
-             "2" = "T1",
-             "3" = "T2")
-  ) + theme_bw() + ylim(0.05, 1.5
-  ) + theme(panel.grid.major = element_blank(),
-            panel.grid.minor = element_blank(),
-            axis.ticks.x = element_blank(),
-            axis.text = element_text(size = 12),
-            axis.title = element_text(size = 12,
-                                      face = "bold")
-  ) + geom_point(aes(fill = is_SCD),
-                 size = 3,
-                 shape = 21, alpha = 0.6,
-                 position = position_jitterdodge(
-                   jitter.width = 0.3)
-  ) + geom_vline(xintercept = 1.5:2.5,
-                 color = "black",
-                 size = 0.2
-  ) + stat_compare_means(
-    label = "p.signif",
-    label.y = 1.45, method = "anova",
-    hide.ns = T)
-ggsave("figures/boxplot_avr.jpg", width = 30,
-       height = 20, units = "cm", dpi = 400)
-
-# Average FC
-ggplot(total,
-       aes(x = timepoint, y = CON_FC,
-           fill = is_SCD)
-) + geom_boxplot(outlier.shape = NA,
-                 width = 0.7
-) + scale_fill_manual(values = c(
-  "#f1a340", "#998ec3")
-) + ylab("Average Functional Connectivity (Z)"
-) + xlab("Timepoints"
-) + labs(fill = "Group"
-) + scale_x_discrete(
-  labels=c("1" = "T0",
-           "2" = "T1",
-           "3" = "T2")
-) + theme_bw() + ylim(0.05, 1.5
-) + theme(panel.grid.major = element_blank(),
-          panel.grid.minor = element_blank(),
-          axis.ticks.x = element_blank(),
-          axis.text = element_text(size = 12),
-          axis.title = element_text(size = 12,
-                                    face = "bold")
-) + geom_point(aes(fill = is_SCD),
-               size = 3,
-               shape = 21, alpha = 0.6,
-               position = position_jitterdodge(
-                 jitter.width = 0.3)
-) + geom_vline(xintercept = 1.5:2.5,
-               color = "black",
-               size = 0.2
-) + stat_compare_means(
-  label = "p.signif",
-  label.y = 1.45, method = "anova",
-  hide.ns = T)
-ggsave("figures/boxplot_avr.jpg", width = 30,
-       height = 20, units = "cm", dpi = 400)
-
-# Average FC individual lines
-ggplot(total,
-       aes(x = timepoint,
-           y = SN_FC,
-           group = filename,
-           fill = is_SCD)
-) + scale_fill_manual(values = c(
-  "#f1a340", "#998ec3")
-) + scale_x_discrete(name = "Timepoints",
-  labels=c("1" = "T0",
-           "2" = "T1",
-           "3" = "T2")
-) + scale_y_continuous(name = "Average Functional Connectivity (Z)",
-                       breaks=seq(0, 1.50, 0.25)
-) + theme_bw(
-) + theme(#panel.grid.major = element_blank(),
-          panel.grid.minor = element_blank(),
-          legend.box.background = element_rect(),
-          panel.border = element_blank(),
-          axis.line = element_line(color = 'black',
-                                   size = 0.4),
-          axis.ticks.x = element_blank(),
-          axis.text = element_text(size = 12),
-          axis.title = element_text(size = 12,
-                                    face = "bold")
-) + geom_point(aes(fill = is_SCD),
-               size = 1, alpha = 0.8,
-               shape = 21
-) + geom_line(aes(color = is_SCD),
-              alpha = 0.5
-              ) + scale_color_manual(values = c(
-   "#f1a340", "#998ec3")
-) + labs(color = "Group", fill = "Group"
-) + stat_summary(aes(group = is_SCD, color = is_SCD),
-                 geom = "line", fun = mean, size = 1.5,
-                 show.legend = F
-) + geom_smooth(aes(group = is_SCD,
-                    color = is_SCD),
-                alpha = 0.3)
-ggsave("figures/boxplot_indiv_points.jpg", width = 30,
-       height = 20, units = "cm", dpi = 400)
-
-
-####==========================================================
-### PARTICIPANT COUNT
-## Characterization for each time point
+# PARTICIPANT COUNT
 
 # Create a data frame of participants who had both follow-ups
 followup <- data.frame(total_t1$filename[which(
@@ -693,6 +568,8 @@ colnames(followup)[1] <- "filename"
 all <- data.frame(total_t0$filename[which(
   total_t0$filename %in% followup$filename==TRUE)])
 colnames(all)[1] <- "filename"
+print(paste("the number of participants who had",
+            "ALL time points was", nrow(all)))
 
 # Create a data frame from baseline participants who had...
 # ...the first follow-up *only*.
@@ -700,6 +577,9 @@ tp01 <- data.frame(total_t0$filename[which(
   total_t0$filename %in% total_t1$filename==TRUE &
     total_t0$filename %in% followup$filename==FALSE)])
 colnames(tp01)[1] <- "filename"
+print(paste("the number of participants who had",
+            "baseline and the first follow-up only was",
+            nrow(tp01)))
 
 # Create a data frame from baseline participants who had...
 # ...the second follow-up *only*.
@@ -707,6 +587,9 @@ tp02 <- data.frame(total_t0$filename[which(
   total_t0$filename %in% total_t2$filename==TRUE &
     total_t0$filename %in% followup$filename==FALSE)])
 colnames(tp02)[1] <- "filename"
+print(paste("the number of participants who had",
+            "baseline and the 2nd follow-up only was",
+            nrow(tp02)))
 
 # Create a data frame from t1 participants who had...
 # ...the second follow-up *only*.
@@ -714,6 +597,8 @@ tp12 <- data.frame(total_t1$filename[which(
   total_t1$filename %in% total_t2$filename==TRUE &
     total_t1$filename %in% followup$filename==FALSE)])
 colnames(tp12)[1] <- "filename"
+print(paste("the number of participants who did",
+            "not have baseline was", nrow(tp12)))
 
 # Create a data frame from baseline participants who had...
 # ...no follow-up.
@@ -723,3 +608,70 @@ baseline <- data.frame(total_t0$filename[which(
     total_t0$filename %in% tp02$filename==FALSE &
     total_t0$filename %in% tp12$filename==FALSE)])
 colnames(baseline)[1] <- "filename"
+print(paste("the number of participants who only had",
+            "baseline (and no follow-ups) was", nrow(baseline)))
+
+
+####==========================================================
+# DESCRIPTIVES - DEMOGRAPHICS
+
+# Age at testing difference between SCD and CON
+neuropsy %>% group_by(timepoint) %>%
+  t_test(AgeatTesting ~ is_SCD)
+describeBy(total_t0$Age_1, total_t0$is_SCD)
+describeBy(total_t1$Age_2, total_t1$is_SCD)
+describeBy(total_t2$Age_3, total_t2$is_SCD)
+
+# Gender across time points and groups
+chisq.test(neuropsy$Gender[which(neuropsy$timepoint=="1")],
+           neuropsy$is_SCD[which(neuropsy$timepoint=="1")])
+chisq.test(neuropsy$Gender[which(neuropsy$timepoint=="2")],
+           neuropsy$is_SCD[which(neuropsy$timepoint=="2")])
+chisq.test(neuropsy$Gender[which(neuropsy$timepoint=="3")],
+           neuropsy$is_SCD[which(neuropsy$timepoint=="3")])
+table(neuropsy$Gender[which(neuropsy$timepoint=="1")],
+      neuropsy$is_SCD[which(neuropsy$timepoint=="1")])
+table(neuropsy$Gender[which(neuropsy$timepoint=="2")],
+      neuropsy$is_SCD[which(neuropsy$timepoint=="2")])
+table(neuropsy$Gender[which(neuropsy$timepoint=="3")],
+      neuropsy$is_SCD[which(neuropsy$timepoint=="3")])
+
+# Education across time points and groups
+neuropsy %>% group_by(timepoint) %>%
+  wilcox_test(neuropsy, 
+            VENIHighest.DegreeEarned ~ is_SCD)
+table(neuropsy$VENIHighest.DegreeEarned[which(neuropsy$timepoint=="1")],
+      neuropsy$is_SCD[which(neuropsy$timepoint=="1")])
+            [which(
+  neuropsy$timepoint=="1")], neuropsy$is_SCD[which(
+    neuropsy$timepoint=="1")])
+chisq.test(neuropsy$VENIHighest.DegreeEarned[which(
+  neuropsy$timepoint=="2")], neuropsy$is_SCD[which(
+    neuropsy$timepoint=="2")])
+chisq.test(neuropsy$VENIHighest.DegreeEarned[which(
+  neuropsy$timepoint=="3")], neuropsy$is_SCD[which(
+    neuropsy$timepoint=="3")])
+table(neuropsy$Gender[which(neuropsy$timepoint=="1")],
+      neuropsy$is_SCD[which(neuropsy$timepoint=="1")])
+table(neuropsy$Gender[which(neuropsy$timepoint=="2")],
+      neuropsy$is_SCD[which(neuropsy$timepoint=="2")])
+table(neuropsy$Gender[which(neuropsy$timepoint=="3")],
+      neuropsy$is_SCD[which(neuropsy$timepoint=="3")])
+
+# MFQ & personality difference between SCD and CON
+neuropsy %>% group_by(timepoint) %>%
+  t_test(MFQGeneral.FrequencyofForgettingFactor ~ is_SCD)
+neuropsy %>% group_by(timepoint) %>%
+  t_test(BigFiveInventoryConscientiousnessTotalScore ~ is_SCD)
+neuropsy %>% group_by(timepoint) %>%
+  t_test(BigFiveInventoryNeuroticismTotalScore ~ is_SCD)
+describeBy(neuropsy$MFQGeneral.FrequencyofForgettingFactor[which(
+  neuropsy$timepoint == 1)], # adjust time point here
+  neuropsy$is_SCD[which(neuropsy$timepoint == 1)])
+describeBy(neuropsy$BigFiveInventoryConscientiousnessTotalScore[which(
+  neuropsy$timepoint == 1)], # adjust time point here
+  neuropsy$is_SCD[which(neuropsy$timepoint == 1)])
+describeBy(neuropsy$BigFiveInventoryNeuroticismTotalScore[which(
+  neuropsy$timepoint == 1)], # adjust time point here
+  neuropsy$is_SCD[which(neuropsy$timepoint == 1)])
+
