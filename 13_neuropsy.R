@@ -13,7 +13,7 @@
 #                rio, stringr, tidyr, readxl, ggpubr,
 #                psych, car, tidyverse, rstatix, cocor,
 #                ppcor, RColorBrewer, Hmisc, DescTools,
-#                permuco, CorrMixed)
+#                permuco, CorrMixed, finalfit)
 
 
 ####==========================================================
@@ -232,7 +232,7 @@ neuropsy <- neuropsy[, c(which(
 # Add Age to 'total'
 total <- cbind(total, neuropsy$AgeatTesting)
 colnames(total)[which(
-  colnames(total)=="AgeatTesting")] <- "Age"
+  colnames(total)=="neuropsy$AgeatTesting")] <- "Age"
 
 
 ####==========================================================
@@ -287,16 +287,16 @@ total_t2 <- total_t2[, -which(
 temp <- merge(data.frame(total_t0, row.names=NULL),
                data.frame(total_t1, row.names=NULL),
                by = "filename",
-               all = TRUE)
+               all = T)
 total_wide <- merge(data.frame(temp, row.names=NULL),
               data.frame(total_t2, row.names=NULL),
               by = "filename",
-              all = TRUE)
+              all = T)
 
 # Adjust column names, especially to remove duplicates
 # Remove the ".y" part from the column names
 total_wide <- total_wide[, -which(
-  grepl(".y", colnames(total_wide))==TRUE)]
+  grepl(".y", colnames(total_wide))==T)]
 
 # Remove the .x from the "is_SCD" variable
 colnames(total_wide)[which(
@@ -335,7 +335,7 @@ total_all_long <- pivot_longer(total_wide,
   cols = ACC_LIFG_1:RPIN_ACC_3,
   names_pattern = "(.*)_(.*)",
   values_to = "Z_FC",
-  values_drop_na = TRUE)
+  values_drop_na = T)
 
 # Make some adjustments to the new data frame
 total_all_long <- data.frame(total_all_long)
@@ -355,7 +355,7 @@ total_all_long <- pivot_longer(total_all_long,
   names_prefix = "Age_",
   cols = Age_1:Age_3,
   values_to = "Age",
-  values_drop_na = TRUE)
+  values_drop_na = T)
 
 # Actual ANOVA ROI pair
 res.aov.total_all_long <- anova_test(data = total_all_long,
@@ -424,8 +424,7 @@ overall <- rcorr(as.matrix(total[, 4:12])); overall
 pwc <- total_all_long %>% 
   pairwise_t_test(
     Z_FC ~ ROI_pair, pool.sd = FALSE,
-    p.adjust.method = "holm"
-  )
+    p.adjust.method = "holm")
 pwc[which(pwc$p.adj.signif!="ns"),]
 
 # 'Age:timepoint' effect
@@ -436,19 +435,27 @@ cor_t2 <- rcorr(as.matrix(total_t2[, 3:11])); cor_t2
 # 'SCD:timepoint' effect
 # Across Groups (looking at the effect of 'timepoint')
 ws <- total_all_long[which(total_all_long$is_SCD=="SCD"),] %>%
-  group_by(ROI_pair) %>%
+  #group_by(ROI_pair) %>%
   anova_test(dv = Z_FC, wid = filename,
              within = timepoint, covariate = Age,
              effect.size = "pes") %>%
   get_anova_table() %>% adjust_pvalue(
     method = "holm"); ws
+total_all_long[which(total_all_long$is_SCD=="SCD"),] %>%
+pairwise_t_test(
+  Z_FC ~ timepoint, pool.sd = FALSE,
+  p.adjust.method = "holm")
 ws <- total_all_long[which(total_all_long$is_SCD=="CON"),] %>%
-  group_by(ROI_pair) %>%
+  #group_by(ROI_pair) %>%
   anova_test(dv = Z_FC, wid = filename,
              within = timepoint, covariate = Age,
              effect.size = "pes") %>%
   get_anova_table() %>% adjust_pvalue(
     method = "holm"); ws
+total_all_long[which(total_all_long$is_SCD=="CON"),] %>%
+  pairwise_t_test(
+    Z_FC ~ timepoint, pool.sd = FALSE,
+    p.adjust.method = "holm")
 
 # Across time points (looking at the effect of Group)
 bs <- total_all_long %>%
@@ -467,6 +474,26 @@ bs <- total_all_long %>%
              effect.size = "pes") %>%
   get_anova_table() %>% adjust_pvalue(
     method = "holm"); bs
+describeBy(total$ACC_LINS, total$is_SCD)
+describeBy(total$LPIN_ACC, total$is_SCD)
+describeBy(total$RPIN_ACC, total$is_SCD)
+total_all_long[which(total_all_long$is_SCD=="SCD"),] %>%
+  pairwise_t_test(
+    Z_FC ~ ROI_pair, pool.sd = FALSE,
+    p.adjust.method = "holm")
+# partial eta squared
+ws <- total_all_long %>%
+  group_by(is_SCD) %>%
+  anova_test(dv = Z_FC, wid = filename,
+             within = ROI_pair, covariate = Age,
+             effect.size = "pes") %>%
+  get_anova_table() %>% adjust_pvalue(
+    method = "holm"); ws
+# pairwise, if wanted (replace, for CON)
+total_all_long[which(total_all_long$is_SCD=="SCD"),] %>%
+  pairwise_t_test(
+    Z_FC ~ ROI_pair, pool.sd = FALSE,
+    p.adjust.method = "holm")
 
 
 ####==========================================================
@@ -560,13 +587,13 @@ t.test(total$SN_FC[which(total$timepoint=="3")],
 
 # Create a data frame of participants who had both follow-ups
 followup <- data.frame(total_t1$filename[which(
-  total_t1$filename %in% total_t2$filename==TRUE)])
+  total_t1$filename %in% total_t2$filename==T)])
 colnames(followup)[1] <- "filename"
 
 # Create a data frame from baseline participants who had...
 # ...a full follow-up.
 all <- data.frame(total_t0$filename[which(
-  total_t0$filename %in% followup$filename==TRUE)])
+  total_t0$filename %in% followup$filename==T)])
 colnames(all)[1] <- "filename"
 print(paste("the number of participants who had",
             "ALL time points was", nrow(all)))
@@ -574,8 +601,8 @@ print(paste("the number of participants who had",
 # Create a data frame from baseline participants who had...
 # ...the first follow-up *only*.
 tp01 <- data.frame(total_t0$filename[which(
-  total_t0$filename %in% total_t1$filename==TRUE &
-    total_t0$filename %in% followup$filename==FALSE)])
+  total_t0$filename %in% total_t1$filename==T &
+    total_t0$filename %in% followup$filename==F)])
 colnames(tp01)[1] <- "filename"
 print(paste("the number of participants who had",
             "baseline and the first follow-up only was",
@@ -584,8 +611,8 @@ print(paste("the number of participants who had",
 # Create a data frame from baseline participants who had...
 # ...the second follow-up *only*.
 tp02 <- data.frame(total_t0$filename[which(
-  total_t0$filename %in% total_t2$filename==TRUE &
-    total_t0$filename %in% followup$filename==FALSE)])
+  total_t0$filename %in% total_t2$filename==T &
+    total_t0$filename %in% followup$filename==F)])
 colnames(tp02)[1] <- "filename"
 print(paste("the number of participants who had",
             "baseline and the 2nd follow-up only was",
@@ -594,8 +621,8 @@ print(paste("the number of participants who had",
 # Create a data frame from t1 participants who had...
 # ...the second follow-up *only*.
 tp12 <- data.frame(total_t1$filename[which(
-  total_t1$filename %in% total_t2$filename==TRUE &
-    total_t1$filename %in% followup$filename==FALSE)])
+  total_t1$filename %in% total_t2$filename==T &
+    total_t1$filename %in% followup$filename==F)])
 colnames(tp12)[1] <- "filename"
 print(paste("the number of participants who did",
             "not have baseline was", nrow(tp12)))
@@ -603,10 +630,10 @@ print(paste("the number of participants who did",
 # Create a data frame from baseline participants who had...
 # ...no follow-up.
 baseline <- data.frame(total_t0$filename[which(
-  total_t0$filename %in% all$filename==FALSE &
-    total_t0$filename %in% tp01$filename==FALSE &
-    total_t0$filename %in% tp02$filename==FALSE &
-    total_t0$filename %in% tp12$filename==FALSE)])
+  total_t0$filename %in% all$filename==F &
+    total_t0$filename %in% tp01$filename==F &
+    total_t0$filename %in% tp02$filename==F &
+    total_t0$filename %in% tp12$filename==F)])
 colnames(baseline)[1] <- "filename"
 print(paste("the number of participants who only had",
             "baseline (and no follow-ups) was", nrow(baseline)))
@@ -622,45 +649,27 @@ describeBy(total_t0$Age_1, total_t0$is_SCD)
 describeBy(total_t1$Age_2, total_t1$is_SCD)
 describeBy(total_t2$Age_3, total_t2$is_SCD)
 
-# Gender across time points and groups
+# Gender across time points and groups (replace time point)
 chisq.test(neuropsy$Gender[which(neuropsy$timepoint=="1")],
            neuropsy$is_SCD[which(neuropsy$timepoint=="1")])
-chisq.test(neuropsy$Gender[which(neuropsy$timepoint=="2")],
-           neuropsy$is_SCD[which(neuropsy$timepoint=="2")])
-chisq.test(neuropsy$Gender[which(neuropsy$timepoint=="3")],
-           neuropsy$is_SCD[which(neuropsy$timepoint=="3")])
 table(neuropsy$Gender[which(neuropsy$timepoint=="1")],
       neuropsy$is_SCD[which(neuropsy$timepoint=="1")])
-table(neuropsy$Gender[which(neuropsy$timepoint=="2")],
-      neuropsy$is_SCD[which(neuropsy$timepoint=="2")])
-table(neuropsy$Gender[which(neuropsy$timepoint=="3")],
-      neuropsy$is_SCD[which(neuropsy$timepoint=="3")])
 
 # Education across time points and groups
 neuropsy %>% group_by(timepoint) %>%
-  wilcox_test(neuropsy, 
-            VENIHighest.DegreeEarned ~ is_SCD)
-table(neuropsy$VENIHighest.DegreeEarned[which(neuropsy$timepoint=="1")],
-      neuropsy$is_SCD[which(neuropsy$timepoint=="1")])
-            [which(
+  t_test(VENIHighest.DegreeEarned ~ is_SCD)
+describeBy(neuropsy$VENIHighest.DegreeEarned[which(
   neuropsy$timepoint=="1")], neuropsy$is_SCD[which(
-    neuropsy$timepoint=="1")])
-chisq.test(neuropsy$VENIHighest.DegreeEarned[which(
-  neuropsy$timepoint=="2")], neuropsy$is_SCD[which(
-    neuropsy$timepoint=="2")])
-chisq.test(neuropsy$VENIHighest.DegreeEarned[which(
-  neuropsy$timepoint=="3")], neuropsy$is_SCD[which(
-    neuropsy$timepoint=="3")])
-table(neuropsy$Gender[which(neuropsy$timepoint=="1")],
-      neuropsy$is_SCD[which(neuropsy$timepoint=="1")])
-table(neuropsy$Gender[which(neuropsy$timepoint=="2")],
-      neuropsy$is_SCD[which(neuropsy$timepoint=="2")])
-table(neuropsy$Gender[which(neuropsy$timepoint=="3")],
-      neuropsy$is_SCD[which(neuropsy$timepoint=="3")])
+    neuropsy$timepoint=="1")]) # replace time point
 
 # MFQ & personality difference between SCD and CON
 neuropsy %>% group_by(timepoint) %>%
   t_test(MFQGeneral.FrequencyofForgettingFactor ~ is_SCD)
+neuropsy %>% group_by(is_SCD) %>%
+  pairwise_t_test(
+    MFQGeneral.FrequencyofForgettingFactor ~ timepoint,
+    pool.sd = F, p.adjust.method = "holm")
+  pwc( ~ is_SCD)
 neuropsy %>% group_by(timepoint) %>%
   t_test(BigFiveInventoryConscientiousnessTotalScore ~ is_SCD)
 neuropsy %>% group_by(timepoint) %>%
@@ -675,3 +684,42 @@ describeBy(neuropsy$BigFiveInventoryNeuroticismTotalScore[which(
   neuropsy$timepoint == 1)], # adjust time point here
   neuropsy$is_SCD[which(neuropsy$timepoint == 1)])
 
+
+####==========================================================
+# MISSING PATTERNS
+
+# Full 'total' with all 'neuropsy'
+total_full <- cbind(total, neuropsy)
+total_full <- total_full[, -which(
+  duplicated(colnames(total_full))==T)]
+
+temp <- total_full[which(
+  total_full$ParticipantID %in% baseline$filename==T), ]
+temp <- rbind(temp, temp)
+temp <- rbind(temp, total_full[which(
+  total_full$ParticipantID %in% baseline$filename==T), ])
+temp[, which(colnames(temp)=="ACC_LIFG"):length(temp)] <- ""
+temp <- reorder(temp$filename)
+
+rownames(temp) <- NULL
+
+
+dependent <- "SN_FC"
+explanatory <- c("AgeatBaseline",
+                 "Gender",
+                 "GeriatricDepressionScaleTotalScore",
+                 "WASIFullScale.IQ.4Subtests",
+                 "Mini.MentalStateExaminationTotalScore",
+                 "MFQFOFInvertedAverage",
+                 "BeckDepressionScaleTotalScore")
+
+total_full %>%
+  ff_glimpse(dependent, explanatory)
+
+missing_plot(total_full, dependent, explanatory)
+
+total0_full <- total_full[which(total_full$timepoint=="1"),]
+total1_full <- total_full[which(total_full$timepoint=="2"),]
+total2_full <- total_full[which(total_full$timepoint=="3"),]
+
+# 
