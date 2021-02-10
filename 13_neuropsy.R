@@ -643,83 +643,85 @@ print(paste("the number of participants who only had",
 # DESCRIPTIVES - DEMOGRAPHICS
 
 # Age at testing difference between SCD and CON
-neuropsy %>% group_by(timepoint) %>%
-  t_test(AgeatTesting ~ is_SCD)
 describeBy(total_t0$Age_1, total_t0$is_SCD)
 describeBy(total_t1$Age_2, total_t1$is_SCD)
 describeBy(total_t2$Age_3, total_t2$is_SCD)
+neuropsy %>% group_by(timepoint) %>%
+  t_test(AgeatTesting ~ is_SCD)
 
-# Gender across time points and groups (replace time point)
-chisq.test(neuropsy$Gender[which(neuropsy$timepoint=="1")],
-           neuropsy$is_SCD[which(neuropsy$timepoint=="1")])
-table(neuropsy$Gender[which(neuropsy$timepoint=="1")],
-      neuropsy$is_SCD[which(neuropsy$timepoint=="1")])
+# Gender across time points and groups
+tp <- "1" # replace the number by the desired time point:
+          # t0 = 1; t1 = 2; t2 = 3
+table(neuropsy$Gender[which(neuropsy$timepoint==tp)],
+      neuropsy$is_SCD[which(neuropsy$timepoint==tp)])
+chisq.test(neuropsy$Gender[which(neuropsy$timepoint==tp)],
+           neuropsy$is_SCD[which(neuropsy$timepoint==tp)])
 
 # Education across time points and groups
+tp <- "3" # replace the number by the desired time point:
+          # t0 = 1; t1 = 2; t2 = 3
+describeBy(neuropsy$VENIHighest.DegreeEarned[which(
+  neuropsy$timepoint==tp)], neuropsy$is_SCD[which(
+    neuropsy$timepoint==tp)]) # replace time point
+# T-test
 neuropsy %>% group_by(timepoint) %>%
   t_test(VENIHighest.DegreeEarned ~ is_SCD)
-describeBy(neuropsy$VENIHighest.DegreeEarned[which(
-  neuropsy$timepoint=="1")], neuropsy$is_SCD[which(
-    neuropsy$timepoint=="1")]) # replace time point
+# Mann-Whitney/Two-sample Wilcoxon Test (comparison)
+wilcox.test(neuropsy$VENIHighest.DegreeEarned[which(
+  neuropsy$is_SCD=="SCD" & neuropsy$timepoint==tp)],
+  neuropsy$VENIHighest.DegreeEarned[which(
+    neuropsy$is_SCD=="CON" & neuropsy$timepoint==tp)])
+
+# Geriatric Depression w/o Q14 (memory question)
+tp <- "3" # replace the number by the desired time point:
+          # t0 = 1; t1 = 2; t2 = 3
+describeBy(
+  neuropsy$GeriatricDepressionScaleTotalScorewithoutQuestion14[which(
+  neuropsy$timepoint == tp)],
+  neuropsy$is_SCD[which(neuropsy$timepoint == tp)])
+neuropsy %>% group_by(timepoint) %>%
+  t_test(GeriatricDepressionScaleTotalScorewithoutQuestion14
+         ~ is_SCD)
 
 # MFQ & personality difference between SCD and CON
+tp <- "3" # replace the number by the desired time point:
+          # t0 = 1; t1 = 2; t2 = 3
+describeBy(neuropsy$MFQFOFInvertedAverage[which(
+  neuropsy$timepoint == tp)],
+  neuropsy$is_SCD[which(neuropsy$timepoint == tp)])
+describeBy(neuropsy$BigFiveInventoryConscientiousnessTotalScore[which(
+  neuropsy$timepoint == tp)],
+  neuropsy$is_SCD[which(neuropsy$timepoint == tp)])
+describeBy(neuropsy$BigFiveInventoryNeuroticismTotalScore[which(
+  neuropsy$timepoint == tp)],
+  neuropsy$is_SCD[which(neuropsy$timepoint == tp)])
+# T-test between groups across time points
 neuropsy %>% group_by(timepoint) %>%
-  t_test(MFQGeneral.FrequencyofForgettingFactor ~ is_SCD)
-neuropsy %>% group_by(is_SCD) %>%
-  pairwise_t_test(
-    MFQGeneral.FrequencyofForgettingFactor ~ timepoint,
-    pool.sd = F, p.adjust.method = "holm")
-  pwc( ~ is_SCD)
+  t_test(MFQFOFInvertedAverage ~ is_SCD)
 neuropsy %>% group_by(timepoint) %>%
   t_test(BigFiveInventoryConscientiousnessTotalScore ~ is_SCD)
 neuropsy %>% group_by(timepoint) %>%
   t_test(BigFiveInventoryNeuroticismTotalScore ~ is_SCD)
-describeBy(neuropsy$MFQGeneral.FrequencyofForgettingFactor[which(
-  neuropsy$timepoint == 1)], # adjust time point here
-  neuropsy$is_SCD[which(neuropsy$timepoint == 1)])
-describeBy(neuropsy$BigFiveInventoryConscientiousnessTotalScore[which(
-  neuropsy$timepoint == 1)], # adjust time point here
-  neuropsy$is_SCD[which(neuropsy$timepoint == 1)])
-describeBy(neuropsy$BigFiveInventoryNeuroticismTotalScore[which(
-  neuropsy$timepoint == 1)], # adjust time point here
-  neuropsy$is_SCD[which(neuropsy$timepoint == 1)])
+# Paired t-test of FOF between timepoints across groups
+neuropsy %>% group_by(is_SCD) %>%
+  pairwise_t_test(
+    MFQGeneral.FrequencyofForgettingFactor ~ timepoint,
+    pool.sd = F, p.adjust.method = "holm")
 
+# MMSE
+tp <- "1" # replace the number by the desired time point:
+          # t0 = 1; t1 = 2; t2 = 3
+describeBy(neuropsy$Mini.MentalStateExaminationTotalScore[which(
+  neuropsy$timepoint == tp)],
+  neuropsy$is_SCD[which(neuropsy$timepoint == tp)])
+neuropsy %>% group_by(timepoint) %>%
+  t_test(Mini.MentalStateExaminationTotalScore ~ is_SCD)
 
-####==========================================================
-# MISSING PATTERNS
-
-# Full 'total' with all 'neuropsy'
-total_full <- cbind(total, neuropsy)
-total_full <- total_full[, -which(
-  duplicated(colnames(total_full))==T)]
-
-temp <- total_full[which(
-  total_full$ParticipantID %in% baseline$filename==T), ]
-temp <- rbind(temp, temp)
-temp <- rbind(temp, total_full[which(
-  total_full$ParticipantID %in% baseline$filename==T), ])
-temp[, which(colnames(temp)=="ACC_LIFG"):length(temp)] <- ""
-temp <- reorder(temp$filename)
-
-rownames(temp) <- NULL
-
-
-dependent <- "SN_FC"
-explanatory <- c("AgeatBaseline",
-                 "Gender",
-                 "GeriatricDepressionScaleTotalScore",
-                 "WASIFullScale.IQ.4Subtests",
-                 "Mini.MentalStateExaminationTotalScore",
-                 "MFQFOFInvertedAverage",
-                 "BeckDepressionScaleTotalScore")
-
-total_full %>%
-  ff_glimpse(dependent, explanatory)
-
-missing_plot(total_full, dependent, explanatory)
-
-total0_full <- total_full[which(total_full$timepoint=="1"),]
-total1_full <- total_full[which(total_full$timepoint=="2"),]
-total2_full <- total_full[which(total_full$timepoint=="3"),]
-
-# 
+# WMS Indices (change variable name - index - as needed)
+tp <- "3" # replace the number by the desired time point:
+          # t0 = 1; t1 = 2; t2 = 3
+describeBy(neuropsy$WMSDelayedMemoryIndex[which(
+  neuropsy$timepoint == tp)],
+  neuropsy$is_SCD[which(neuropsy$timepoint == tp)])
+neuropsy %>% group_by(timepoint) %>%
+  t_test(WMSDelayedMemoryIndex ~ is_SCD)
