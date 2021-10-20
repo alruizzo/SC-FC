@@ -929,7 +929,7 @@ ggsave("figures/boxplot_T2.jpg", width = 30,
        height = 20, units = "cm", dpi = 400)
 
 # Overall across ROI pairs
-ggplot(total_all_long,
+ggplot(total_all_long[which(total_all_long$is_SCD=="SCD"),],
        aes(x = ROI_pair,
            y = Z_FC,
            fill = ROI_pair)
@@ -939,7 +939,7 @@ ggplot(total_all_long,
                                  "#b2df8a", "#b2df8a")
   ) + xlab("ROI pairs"
   ) + ylab("Functional connectivity (Z)"
-  ) + ggtitle("Main effect of ROI pairs"
+  ) + ggtitle("SCD"
   ) + ylim(-0.25, 2.25
   ) + scale_x_discrete(
     labels=c("RINS_ACC" = "ACC-RINS",
@@ -951,11 +951,12 @@ ggplot(total_all_long,
   ) + theme(panel.grid.minor = element_blank(),
             axis.ticks.x = element_blank(),
             legend.position = "NULL",
-            axis.text = element_text(size = 12),
-            axis.title = element_text(size = 12,
+            axis.text = element_text(size = 24),
+            axis.title = element_text(size = 24,
                                       face = "bold"),
             plot.title = element_text(hjust = 0.5,
-                                      face = "bold")
+                                      face = "bold",
+                                      size = 30)
   ) + geom_vline(xintercept = 4.5,
                  color = "black",
                  size = 0.2
@@ -969,7 +970,7 @@ ggplot(total_all_long,
                        c("RIFG_ACC", "RPIN_ACC"),
                        c("ACC_LIFG", "LPIN_ACC")),
     tip.length = 0.01,
-    hide.ns = T
+    hide.ns = T, size = 6
   ) + geom_hline(yintercept = 0,
                  color = "gray",
                  size = 0.2,
@@ -977,7 +978,7 @@ ggplot(total_all_long,
   ) + geom_boxplot(width = 0.1, fill = "white",
                    alpha = 0.7,
                    outlier.shape = NA)
-ggsave("figures/boxplot_ROIs.jpg", width = 30,
+ggsave("figures/boxplot_ROIs_SCD_poster.jpg", width = 32,
        height = 20, units = "cm", dpi = 400)
 
 ## Box plots of average SN FC per time point
@@ -1045,24 +1046,24 @@ ggplot(total,
           axis.line = element_line(color = 'black',
                                    size = 0.4),
           axis.ticks.x = element_blank(),
-          axis.text = element_text(size = 12),
-          axis.title = element_text(size = 12,
+          axis.text = element_text(size = 24),
+          axis.title = element_text(size = 24,
                                     face = "bold")
 ) + geom_point(aes(fill = is_SCD),
-               size = 1, alpha = 0.8,
+               size = 2, alpha = 0.8,
                shape = 21
 ) + geom_line(aes(color = is_SCD),
-              alpha = 0.5
+              alpha = 0.7, size = 0.9
               ) + scale_color_manual(values = c(
    "#f1a340", "#998ec3")
 ) + labs(color = "Group", fill = "Group"
 ) + stat_summary(aes(group = is_SCD, color = is_SCD),
-                 geom = "line", fun = mean, size = 1.5,
+                 geom = "line", fun = mean, size = 2.5,
                  show.legend = F
 ) + geom_smooth(aes(group = is_SCD,
                     color = is_SCD),
                 alpha = 0.3)
-ggsave("figures/boxplot_indiv_points.jpg", width = 30,
+ggsave("figures/indiv_points_poster.jpg", width = 30,
        height = 20, units = "cm", dpi = 400)
 
 
