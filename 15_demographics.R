@@ -505,7 +505,51 @@ psych::describe(avr_measurement_dist_t2)
 psych::describe(avr_measurement_dist_t3)
 
 
-#### MIXED EFFECTS MODEL ============================================
+### PARTICIPANT RETURN RATE =========================================
+# Twenty participants were *not* invited for follow-up: con-0001 (1),
+# con-0034 to con-0044 (11), and sci-0020 to sci-0027 (8)
+
+invited <- 49
+
+# Number of participants at baseline
+length(data$subjects[which(data$timepoint == 1)])
+
+# Number of participants from baseline, who returned at the first
+# follow-up
+length(data$subjects[which(
+  data$subjects[which(
+    data$timepoint == 2)] %in% data$subjects[which(
+      data$timepoint == 1)] == T)]) / invited * 100
+
+# Number of participants from the first follow-up, who returned at
+# the second follow-up
+length(data$subjects[which(
+  data$subjects[which(
+    data$timepoint == 3)] %in% data$subjects[which(
+      data$timepoint == 2)] == T)]) / invited * 100
+
+# Number of participants from baseline, who returned at the second
+# follow-up
+length(data$subjects[which(
+  data$subjects[which(
+    data$timepoint == 3)] %in% data$subjects[which(
+      data$timepoint == 1)] == T)]) / invited * 100
+
+# Number of participants from the first follow-up, who returned at
+# the second follow-up
+length(data$subjects[which(
+  data$subjects[which(
+    data$timepoint == 3)] %in% data$subjects[which(
+      data$timepoint == 2)] == T)]) / invited * 100
+
+# Identify participants from baseline who did not return for the
+# first follow-up but did return for the second
+data_wide$subjects[which(is.na(data_wide$AvrFC2) == T &
+                           is.na(data_wide$AvrFC1) == F &
+                           is.na(data_wide$AvrFC3) == F)]
+
+
+#### DEMOGRAPHICS TABLE =============================================
 
 # First, let's create another variable with baseline MFQ
 neuropsy$MFQ <- neuropsy$MFQFOFInvertedAverage
@@ -524,13 +568,33 @@ for (participant in unique(neuropsy$ParticipantID)){
 
 # Let's manually add one value who had MFQ at the first follow-up
 # but not at baseline
-participant_MFQ <- neuropsy$ParticipantID[is.na(neuropsy$MFQ) &
-                                            !is.na(neuropsy$MFQFOFInvertedAverage)]
+participant_MFQ <-
+  neuropsy$ParticipantID[is.na(neuropsy$MFQ) &
+                           !is.na(neuropsy$MFQFOFInvertedAverage)]
 neuropsy$MFQ[which(neuropsy$ParticipantID==participant_MFQ)] <-
   neuropsy$MFQFOFInvertedAverage[which(
-    neuropsy$ParticipantID==participant_MFQ & neuropsy$timepoint==2)]  
+    neuropsy$ParticipantID==participant_MFQ & neuropsy$timepoint==2)]
+
+# Let's now split the dataframe according to timepoint
+baseline <- subset(neuropsy, timepoint == 1)
+followup1 <- subset(neuropsy, timepoint == 2)
+followup2 <- subset(neuropsy, timepoint == 3)
+
+# Checking the MMSE values
+baseline$ParticipantID[which(
+  baseline$Mini.MentalStateExaminationTotalScore<25)]
+
+# Next, check whether these values stay "low" in the ensuing
+# measurements (for the corresponding participants)
+# In the first follow-up:
+followup1$Mini.MentalStateExaminationTotalScore[which(
+  followup1$ParticipantID=="wsu-con-0030")]
+# In the last follow-up:
+followup2$Mini.MentalStateExaminationTotalScore[which(
+  followup2$ParticipantID=="wsu-sci-0012")]
 
 
+#### MIXED EFFECTS MODEL ============================================
 # Depression
 gds_mixed = lmer(GeriatricDepressionScaleTotalScorewithoutQuestion14 ~
                    timepoint + MFQFOFInvertedAverage +
