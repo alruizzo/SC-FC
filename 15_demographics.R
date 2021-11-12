@@ -7,8 +7,8 @@
  # require(pacman)
 pacman::p_load(ggplot2, dplyr, ggthemes, ggvis, plotly,
                tidyr, readxl, ggpubr, psych, car, GGally,
-               tidyverse, rstatix, Hmisc, lme4,
-               magrittr, mice, MVN, naniar, dvmisc)
+               tidyverse, rstatix, Hmisc, lme4, gtsummary,
+               magrittr, mice, MVN, naniar, dvmisc, gt)
 
 
 #### GET MAIN FILE ==================================================
@@ -148,193 +148,6 @@ data_long_fc <-
                values_to = "values")
 
 
-#### MISSINGNESS =================================================
-# Create graph with missing pattern (when using "AvrFC")
-jpeg("missing_pattern.jpeg", width = 3220,
-     height = 1880, res = 300)
-missing <- md.pattern(data_wide, rotate.names = T)
-dev.off()
-
-# Little's test (mcar_test) from the "naniar" pckg
-# Missing completely at random
-mcar_test(data_wide[,
-                    unlist(lapply(data_wide, is.numeric))])
-
-# Dummy variables (1 = missing; 0 = no)
-data_wide_missing <-
-  data.frame(ifelse(is.na(
-    data_wide[, c(grep("fminor", colnames(data_wide)),
-                  grep("AvrF", colnames(data_wide)))]), "1", "0"))
-
-# Convert to factor the variables
-data_wide_missing <- data.frame(lapply(data_wide_missing,
-                            factor))
-
-# Add independent variables
-data_wide_missing <- cbind(data_wide[, c(1:5)],
-                           data_wide_missing)
-
-
-#### DESCRIPTIVE PLOTS: STRUCTURAL CONNECTIVITY =====================
-# ICVF
-ggplot(data,
-       aes(x = timepoint,
-           y = fminor_ICVF, # "fminor_ICVF", "slfp", "unc", or "atr"
-           group = subjects,
-           fill = is_SCD)
-) + scale_fill_manual(values = c(
-         "#f1a340", "#998ec3")
-) + scale_x_discrete(name = "Timepoints",
-                     labels=c("1" = "T0",
-                              "2" = "T1",
-                              "3" = "T2")
-) + scale_y_continuous(name = "Structural Connectivity - SN ICVF",
-                       limits = c(0.4, 0.7)
-) + theme_bw(
-) + theme(panel.grid.minor = element_blank(),
-          panel.border = element_blank(),
-          legend.box.background = element_rect(),
-          axis.line = element_line(color = 'black',
-                           size = 0.4),
-          axis.ticks.x = element_blank(),
-          axis.text = element_text(size = 24),
-          axis.title = element_text(size = 24,
-                            face = "bold")
-) + geom_point(aes(fill = is_SCD),
-               size = 2, alpha = 0.8,
-               shape = 21
-) + geom_line(aes(color = is_SCD),
-              alpha = 0.5, size = 0.9
-) + scale_color_manual(values = c(
-  "#f1a340", "#998ec3")
-) + labs(color = "Group", fill = "Group"
-) + stat_summary(aes(group = is_SCD, color = is_SCD),
-                 geom = "line", fun = mean, size = 2.5
-# ) + stat_summary(aes(group = 1),
-#                  geom = "line", fun = mean, size = 1
-) + geom_smooth(aes(group = is_SCD,
-                    color = is_SCD),
-                alpha = 0.3)
-ggsave("indiv_points_ICVF.jpg", width = 30,
-       height = 20, units = "cm", dpi = 400)
-
-
-#### DESCRIPTIVE PLOTS: FUNCTIONAL CONNECTIVITY =====================
-# Avr FC SN
-ggplot(data,
-       aes(x = timepoint,
-           y = AvrFC, #AvrFC, ACC_LMFG, ACC_RMFG, ACC_LINS, ACC_RINS
-           group = subjects,
-           fill = is_SCD)
-) + scale_fill_manual(values = c(
-  "#f1a340", "#998ec3")
-) + scale_x_discrete(name = "Timepoints",
-                     labels=c("1" = "T0",
-                              "2" = "T1",
-                              "3" = "T2")
-) + scale_y_continuous(name = "Average FC CON",
-                       limits = c(0, 1.5, 0.25)
-) + theme_bw(
-) + theme(panel.grid.minor = element_blank(),
-          panel.border = element_blank(),
-          legend.box.background = element_rect(),
-          axis.line = element_line(color = 'black',
-                                   size = 0.4),
-          axis.ticks.x = element_blank(),
-          axis.text = element_text(size = 24),
-          axis.title = element_text(size = 24,
-                                    face = "bold")
-) + geom_point(aes(fill = is_SCD),
-               size = 2, alpha = 0.8,
-               shape = 21
-) + geom_line(aes(color = is_SCD),
-              alpha = 0.5, size = 0.9
-) + scale_color_manual(values = c(
-  "#f1a340", "#998ec3")
-) + labs(color = "Group", fill = "Group"
-# ) + stat_summary(aes(group = "subjects"),
-#                  geom = "line", fun = mean, size = 1, lty = 2)
-) + stat_summary(aes(group = is_SCD, color = is_SCD),
-                 geom = "line", fun = mean, size = 2.5
-) + geom_smooth(aes(group = is_SCD,
-                    color = is_SCD),
-                alpha = 0.3)
-ggsave("indiv_points_AvrFC.jpg", width = 30,
-       height = 20, units = "cm", dpi = 400)
-
-
-#### MAHALANOBIS DISTANCE ===========================================
-# To check for multivariate outliers (use with AvrFC only!)
-
-# Variance-covariance matrix
-covar_matrix <- round(cov(
-  data_wide[, unlist(lapply(data_wide,
-                                    is.numeric))],
-  use = "pairwise.complete.obs"), 3)
-
-# Generalized variance
-det(covar_matrix)
-
-# Correlation matrix
-corr_matrix <- round(cor(
-  data_wide[, unlist(lapply(data_wide,
-                                    is.numeric))],
-  use = "pairwise.complete.obs"), 3)
-
-# Means vector
-means_vector <-
-  round(apply(
-    data_wide[, unlist(lapply(data_wide, is.numeric))], 2,
-    mean, na.rm = T), 3)
-
-# Ordering the correlation values
-ind <- order(abs(corr_matrix[lower.tri(corr_matrix,
-                                       diag = F)]),
-             decreasing = T)
-val <-
-  as.vector(corr_matrix[lower.tri(corr_matrix,
-                                  diag = F)])[order(
-                                    abs(
-                                      corr_matrix[lower.tri(
-                                        corr_matrix,
-                                        diag = F)]),
-                                    decreasing = T)]
-rbind("index" = ind, "coeff" = val)
-
-# calculate the Mahalanobis distance (for complete cases, though)
-mahalanobisd <- sqrt(mahalanobis(data_wide[,unlist(lapply(
-  data_wide, is.numeric))], means_vector, covar_matrix))
-mahalanobisd[order(mahalanobisd, decreasing = T)]
-
-# Assess significance with chisq probability distribution
-dmahalanobisp <- cbind(data_wide[, unlist(lapply(data_wide,
-    is.numeric))], "DM" = round(mahalanobisd, 3),
-    "Prob" = round(pchisq(mahalanobisd,
-                          length(data_wide[, unlist(
-            lapply(data_wide, is.numeric))])), 4))
-subset(dmahalanobisp, dmahalanobisp["Prob"] < 0.001)
-
-# Check graphically in a boxplot
-boxplot(mahalanobisd)
-
-# MULTIVARIATE NORMALITY (package MVN)
-# Henze-Zirkler's test
-mvn(data = data_wide[, unlist(lapply(data_wide,is.numeric))],
-    mvnTest = "hz")
-
-# Mardia's test
-mvn(data = data_wide[, unlist(lapply(data_wide,is.numeric))],
-    mvnTest = "mardia")
-
-# Royston's test
-jpeg("qqplot_mvn.jpeg", width = 3220,
-          height = 1880, res = 300)
-mvn(data = data_wide[, unlist(lapply(data_wide, is.numeric))],
-    mvnTest = "royston",
-    univariatePlot = "qqplot")
-dev.off()
-
-
 #### LABELS USED IN LAVAAN ==========================================
 # Check column names
 colnames(data_wide)
@@ -415,6 +228,7 @@ neuropsy$DoctorSeen.forMemoryComplaints <-
   factor(neuropsy$DoctorSeen.forMemoryComplaints)
 neuropsy$FamilyHistoryof.AlzheimersorDementia <-
   factor(neuropsy$FamilyHistoryof.AlzheimersorDementia)
+neuropsy$RaceEthnicity <- factor(neuropsy$RaceEthnicity)
 
 # Select the same participants as in 'data'
 neuropsy <- neuropsy[which(neuropsy$ParticipantID %in% paste(
@@ -594,32 +408,213 @@ followup2$Mini.MentalStateExaminationTotalScore[which(
   followup2$ParticipantID=="wsu-sci-0012")]
 
 
+### MAKE DEMOGRAPHICS TABLE  ========================================
+
+# Make dataset with variables to summarize
+summ_vbles <- neuropsy %>% select("Age at baseline" = AgeatBaseline,
+                            "Sex" = Gender,
+                            "Education level" =
+                              VENIHighest.DegreeEarned,
+                            "Time since previous measurement (months)" =
+                              time_measurements_mo,
+                            "MFQ - Frequency of Forgetting" =
+                              MFQFOFInvertedAverage,
+                            "Family history of dementia" =
+                              FamilyHistoryof.AlzheimersorDementia,
+                            "Sought medical help due to SCD" =
+                            DoctorSeen.forMemoryComplaints,
+                            "Ethnicity" = 
+                              RaceEthnicity,
+                            "Big Five Inventory – Conscientiousness" =
+                              BigFiveInventoryConscientiousnessTotalScore,
+                            "Big Five Inventory – Neuroticism" =
+                              BigFiveInventoryNeuroticismTotalScore,
+                            "Geriatric Depression Scale" =
+                              GeriatricDepressionScaleTotalScore,
+                            "MiniMental State Examination (/30)" =
+                              Mini.MentalStateExaminationTotalScore,
+                            "General IQ" =
+                              WASIFullScale.IQ.4Subtests,
+                            "Rey Auditory Verbal Learning (total)" =
+                              ReyAuditoryLearningTotalLearningScore,
+                            "WMS Auditory Memory Index" =
+                              WMSAuditoryMemoryIndex,
+                            "WMS Visual Memory Index" =
+                              WMSVisualMemoryIndex,
+                            "WMS Visual Working Memory Index" =
+                              WMSVisualWorkingMemoryIndex,
+                            "WMS Immediate Memory Index" =
+                              WMSImmediateMemoryIndex,
+                            "WMS Delayed Memory Index" =
+                              WMSDelayedMemoryIndex,
+                            "Trail Making Test A (time in s)" =
+                              TrailMakingTestATime,
+                            "Trail Making Test B (time in s)" =
+                              TrailMakingTestBTime,
+                            "Digit Symbol Substitution (total score)" =
+                              DigitSymbolSubstitutionTotal,
+                            "Stroop Test (ratio score)" =
+                              StroopTestRatioScore.StroopTimeColorTime.,
+                            "Verbal Fluency (total score)" =
+                              VerbalFluency.TestAnimalandOccupationTotal,
+                            timepoint) %>%
+  tbl_summary(by = "timepoint", missing = "ifany",
+              type = list("MiniMental State Examination (/30)" ~ "continuous",
+                          "Time since previous measurement (months)" ~
+                            "continuous"),
+              statistic = list(all_continuous() ~ "{mean} ({sd})"),
+              digits = list(all_categorical() ~ c(0, 1),
+                            all_continuous() ~ c(2, 2))) %>%
+  modify_header(label = "**Variable**") %>%
+  as_gt() %>% opt_table_font(font = "Arial") %>%
+  tab_options(table_body.hlines.width = 0,
+              column_labels.border.top.width = 2,
+              column_labels.border.top.color = "black",
+              column_labels.border.bottom.width = 2,
+              column_labels.border.bottom.color = "black",
+              table_body.border.bottom.color = "black",
+              table.border.bottom.color = "white",
+              table.font.size = px(14))
+gtsave(summ_vbles, "demographic_table_raw.html")
+
+# If we want to check proportion of genders for each time point
+# Baseline
+freq1 <- table(neuropsy$Gender[which(neuropsy$timepoint == 1)])
+chisq.test(freq1)
+# Follow-up 1
+freq2 <- table(neuropsy$Gender[which(neuropsy$timepoint == 2)])
+chisq.test(freq2)
+# Follow-up 2
+freq3 <- table(neuropsy$Gender[which(neuropsy$timepoint == 3)])
+chisq.test(freq3)
+
+
+### ADJUST NEUROPSY TO WIDE FORMAT  =================================
+# Create 'wide' data frame
+neuropsy_wide <-
+  pivot_wider(neuropsy,
+              id_cols = which(colnames(neuropsy)=="ParticipantID"),
+              names_from = which(colnames(neuropsy)=="timepoint"),
+              values_from = c(-which(
+                colnames(neuropsy)=="ParticipantID" |
+                  colnames(neuropsy)=="timepoint")))
+
+# Leave only baseline columns for: Gender, Age, MFQFOF, SCD
+neuropsy_wide <- neuropsy_wide[, -c(which(
+  colnames(neuropsy_wide)=="Gender_2" |
+    colnames(neuropsy_wide)=="Gender_3" |
+    colnames(neuropsy_wide)=="RaceEthnicity_2" |
+    colnames(neuropsy_wide)=="RaceEthnicity_3" |
+    colnames(neuropsy_wide)=="is_SCD_2" |
+    colnames(neuropsy_wide)=="is_SCD_3"))]
+
+
 #### MIXED EFFECTS MODEL ============================================
-# Depression
-gds_mixed = lmer(GeriatricDepressionScaleTotalScorewithoutQuestion14 ~
-                   timepoint + MFQFOFInvertedAverage +
-                   timepoint*MFQFOFInvertedAverage +
+# Variable time: coding baseline to 0
+neuropsy$time <- as.numeric(neuropsy$timepoint) - 1
+
+# MFQ
+mfq_mixed <- lmer(MFQFOFInvertedAverage ~
+                   time + is_SCD +
+                   time*is_SCD +
                    (1 | ParticipantID),
                  data = neuropsy)
-summary(gds_mixed)
-confint(gds_mixed)
+summary(mfq_mixed); confint(mfq_mixed)
+
+# Depression
+gds_mixed <- lmer(GeriatricDepressionScaleTotalScore ~
+                   time + MFQFOFInvertedAverage +
+                   time*MFQFOFInvertedAverage +
+                   (1 | ParticipantID),
+                 data = neuropsy)
+summary(gds_mixed); confint(gds_mixed); anova(gds_mixed)
+
+# Conscientiousness
+cons_mixed <- lmer(BigFiveInventoryConscientiousnessTotalScore ~
+                   time + MFQFOFInvertedAverage +
+                   time*MFQFOFInvertedAverage +
+                   (1 | ParticipantID),
+                 data = neuropsy)
+summary(cons_mixed); confint(cons_mixed)
 
 # Neuroticism
-neurot_mixed = lmer(BigFiveInventoryNeuroticismTotalScore ~
-                   timepoint + MFQFOFInvertedAverage +
-                   timepoint*MFQFOFInvertedAverage +
+neurot_mixed <- lmer(BigFiveInventoryNeuroticismTotalScore ~
+                   time + MFQFOFInvertedAverage +
+                   time*MFQFOFInvertedAverage +
                    (1 | ParticipantID),
-                 data = neuropsy, REML=F)
-summary(neurot_mixed)
-confint(neurot_mixed)
+                 data = neuropsy)
+summary(neurot_mixed); confint(neurot_mixed)
 
-gds_mixed = lmer(MFQFOFInvertedAverage ~ AgeatBaseline +
-                   Gender + Mini.MentalStateExaminationTotalScore +
-                   timepoint +
-                   BigFiveInventoryConscientiousnessTotalScore +
-                   BigFiveInventoryNeuroticismTotalScore +
-                   GeriatricDepressionScaleTotalScorewithoutQuestion14 +
-                   (1 | ParticipantID),
-                 data = neuropsy, REML=F)
-summary(scd_mixed)
-confint(scd_mixed)
+# MMSE
+mmse_mixed = lmer(Mini.MentalStateExaminationTotalScore ~
+                    time + MFQFOFInvertedAverage +
+                    time*MFQFOFInvertedAverage +
+                    (1 | ParticipantID),
+                  data = neuropsy)
+summary(mmse_mixed); confint(mmse_mixed)
+
+# IQ
+iq_mixed = lmer(WASIFullScale.IQ.4Subtests ~
+                    time + MFQFOFInvertedAverage +
+                    time*MFQFOFInvertedAverage +
+                    (1 | ParticipantID),
+                  data = neuropsy)
+summary(iq_mixed); confint(iq_mixed)
+
+# TMT
+tmta_mixed = lmer(TrailMakingTestATime ~
+                    time + MFQFOFInvertedAverage +
+                    time*MFQFOFInvertedAverage +
+                    (1 | ParticipantID),
+                  data = neuropsy)
+summary(tmta_mixed); confint(tmta_mixed)
+
+# digit symbol
+digit_mixed = lmer(DigitSymbolSubstitutionTotal ~
+                    time + MFQFOFInvertedAverage +
+                    time*MFQFOFInvertedAverage +
+                    (1 | ParticipantID),
+                  data = neuropsy)
+summary(digit_mixed); confint(digit_mixed)
+
+# rey
+rey_mixed = lmer(ReyAuditoryLearningTotalLearningScore ~
+                    time + MFQFOFInvertedAverage +
+                    time*MFQFOFInvertedAverage +
+                    (1 | ParticipantID),
+                  data = neuropsy)
+summary(rey_mixed); confint(rey_mixed)
+
+# WMS (WMSAuditoryMemoryIndex, WMSVisualMemoryIndex,
+# WMSVisualWorkingMemoryIndex, WMSImmediateMemoryIndex,
+# WMSDelayedMemoryIndex)
+wms_mixed = lmer(WMSDelayedMemoryIndex ~
+                    time + MFQFOFInvertedAverage +
+                    time*MFQFOFInvertedAverage +
+                    (1 | ParticipantID),
+                  data = neuropsy)
+summary(wms_mixed); confint(wms_mixed)
+
+# tmtb
+tmtb_mixed = lmer(TrailMakingTestBTime ~
+                    time + MFQFOFInvertedAverage +
+                    time*MFQFOFInvertedAverage +
+                    (1 | ParticipantID),
+                  data = neuropsy)
+summary(tmtb_mixed); confint(tmtb_mixed)
+
+# Stroop
+stroop_mixed = lmer(StroopTestRatioScore.StroopTimeColorTime. ~
+                    time + MFQFOFInvertedAverage +
+                    time*MFQFOFInvertedAverage +
+                    (1 | ParticipantID),
+                  data = neuropsy)
+summary(stroop_mixed); confint(stroop_mixed)
+
+# Verbal fluency
+verb_mixed = lmer(VerbalFluency.TestAnimalandOccupationTotal ~
+                    time + MFQFOFInvertedAverage +
+                    time*MFQFOFInvertedAverage +
+                    (1 | ParticipantID),
+                  data = neuropsy)
+summary(verb_mixed); confint(verb_mixed)
