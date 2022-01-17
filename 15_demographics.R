@@ -535,7 +535,7 @@ cons_mixed <- lmer(BigFiveInventoryConscientiousnessTotalScore ~
                    time*MFQFOFInvertedAverage +
                    (1 | ParticipantID),
                  data = neuropsy)
-summary(cons_mixed); confint(cons_mixed)
+summary(cons_mixed); confint(cons_mixed); anova(cons_mixed)
 
 # Neuroticism
 neurot_mixed <- lmer(BigFiveInventoryNeuroticismTotalScore ~
@@ -543,7 +543,7 @@ neurot_mixed <- lmer(BigFiveInventoryNeuroticismTotalScore ~
                    time*MFQFOFInvertedAverage +
                    (1 | ParticipantID),
                  data = neuropsy)
-summary(neurot_mixed); confint(neurot_mixed)
+summary(neurot_mixed); confint(neurot_mixed); anova(neurot_mixed)
 
 # MMSE
 mmse_mixed = lmer(Mini.MentalStateExaminationTotalScore ~
@@ -588,7 +588,7 @@ summary(rey_mixed); confint(rey_mixed)
 # WMS (WMSAuditoryMemoryIndex, WMSVisualMemoryIndex,
 # WMSVisualWorkingMemoryIndex, WMSImmediateMemoryIndex,
 # WMSDelayedMemoryIndex)
-wms_mixed = lmer(WMSDelayedMemoryIndex ~
+wms_mixed <- lmer(WMSDelayedMemoryIndex ~
                     time + MFQFOFInvertedAverage +
                     time*MFQFOFInvertedAverage +
                     (1 | ParticipantID),
@@ -612,9 +612,74 @@ stroop_mixed = lmer(StroopTestRatioScore.StroopTimeColorTime. ~
 summary(stroop_mixed); confint(stroop_mixed)
 
 # Verbal fluency
-verb_mixed = lmer(VerbalFluency.TestAnimalandOccupationTotal ~
+verb_mixed <- lmer(VerbalFluency.TestAnimalandOccupationTotal ~
                     time + MFQFOFInvertedAverage +
                     time*MFQFOFInvertedAverage +
                     (1 | ParticipantID),
                   data = neuropsy)
 summary(verb_mixed); confint(verb_mixed)
+
+# Fminor
+data$time <- as.numeric(data$timepoint) - 1
+fminor_mixed <- lmer(fminor_ICVF ~
+                    time + MFQFOFInvAver +
+                    time*MFQFOFInvAver +
+                    (1 | subjects),
+                  data = data)
+summary(fminor_mixed); confint(fminor_mixed); anova(fminor_mixed)
+
+# AvrFC
+fc_mixed <- lmer(AvrFC ~
+                   time + MFQFOFInvAver +
+                   time*MFQFOFInvAver +
+                   (1 | subjects),
+                 data = data)
+summary(fc_mixed); confint(fc_mixed); anova(fc_mixed)
+
+
+#### MIXED EFFECTS PLOTS ============================================
+# Plot the interaction (to be able to understand it better)
+# Depression
+ggplot(data = neuropsy,
+       aes(x = MFQFOFInvertedAverage,
+           y = GeriatricDepressionScaleTotalScore,
+           group = timepoint,
+           color = timepoint)) +
+  xlab("Baseline MFQ") +
+  scale_y_continuous(name = "GDS") +
+  theme_bw() +
+  theme(text = element_text(size = 18, color = "black")) +
+  stat_summary(aes(group = timepoint, color = timepoint),
+               fun = mean) +
+  geom_smooth(aes(color = timepoint, fill = timepoint),
+              method = "lm", alpha = 0.3)
+
+# Depression
+ggplot(data = neuropsy,
+       aes(x = MFQFOFInvertedAverage,
+           y = GeriatricDepressionScaleTotalScore,
+           group = timepoint,
+           color = timepoint)) +
+  xlab("Baseline MFQ") +
+  scale_y_continuous(name = "GDS") +
+  theme_bw() +
+  theme(text = element_text(size = 18, color = "black")) +
+  stat_summary(aes(group = timepoint, color = timepoint),
+               fun = mean) +
+  geom_smooth(aes(color = timepoint, fill = timepoint),
+              method = "lm", alpha = 0.3)
+
+# Conscientiousness
+ggplot(data = neuropsy,
+       aes(x = MFQFOFInvertedAverage,
+           y = BigFiveInventoryConscientiousnessTotalScore,
+           group = timepoint,
+           color = timepoint)) +
+  xlab("Baseline MFQ") +
+  scale_y_continuous(name = "Conscientiousness") +
+  theme_bw() +
+  theme(text = element_text(size = 18, color = "black")) +
+  stat_summary(aes(group = timepoint, color = timepoint),
+               fun = mean) +
+  geom_smooth(aes(color = timepoint, fill = timepoint),
+              method = "lm", alpha = 0.3)
